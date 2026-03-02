@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KT M&S">
+<meta name="theme-color" content="#060a11">
+<title>KT M&S 경영관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg0:#060a11;--bg1:#0c1220;--bg2:#141d2f;--bg3:#1b2740;--bg4:#243352;
+  --border:#2a3a58;--border2:#354766;--glow:rgba(56,189,248,.15);
+  --t1:#f1f5f9;--t2:#94a3b8;--t3:#64748b;
+  --acc:#38bdf8;--acc2:#7dd3fc;
+  --g:#34d399;--g2:rgba(52,211,153,.1);
+  --r:#f87171;--r2:rgba(248,113,113,.1);
+  --y:#fbbf24;--y2:rgba(251,191,36,.1);
+  --p:#a78bfa;--p2:rgba(167,139,250,.1);
+  --o:#fb923c;--o2:rgba(251,146,60,.1);
+  --f:'Noto Sans KR',-apple-system,sans-serif;
+  --fm:'JetBrains Mono',monospace;
+  --rad:14px;--rad2:10px;--rad3:20px;
+  --nav-h:72px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; background:var(--bg0); }
+body { font-family:var(--f); color:var(--t1); overscroll-behavior:none; }
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.app { display:flex; flex-direction:column; height:100vh; height:100dvh; }
+.hdr { padding:calc(var(--safe-top)+10px) 16px 10px; background:var(--bg1); border-bottom:1px solid var(--border); flex-shrink:0; position:relative; z-index:100; }
+.hdr::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--acc),transparent); opacity:.3; }
+.hdr-inner { display:flex; align-items:center; justify-content:space-between; }
+.logo { display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; letter-spacing:-.5px; }
+.logo-i { width:28px; height:28px; background:linear-gradient(135deg,var(--acc),#818cf8); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:#fff; flex-shrink:0; }
+.hdr-badge { padding:3px 10px; background:var(--glow); color:var(--acc); border-radius:16px; font-size:10px; font-weight:600; border:1px solid rgba(56,189,248,.2); }
+.main { flex:1; overflow:hidden; position:relative; }
+.pnl { display:none; height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 16px calc(var(--nav-h)+var(--safe-bottom)+16px); }
+.pnl.on { display:block; }
+.bnav { position:fixed; bottom:0; left:0; right:0; height:calc(var(--nav-h)+var(--safe-bottom)); padding-bottom:var(--safe-bottom); background:rgba(12,18,32,.95); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); border-top:1px solid var(--border); display:flex; align-items:stretch; z-index:200; }
+.bni { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; padding:6px 2px; transition:all .2s; position:relative; border:none; background:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+.bni .ico { font-size:20px; transition:transform .2s; }
+.bni .lbl { font-size:9.5px; font-weight:600; color:var(--t3); transition:color .2s; letter-spacing:.2px; }
+.bni.on .lbl { color:var(--acc); }
+.bni.on .ico { transform:translateY(-2px); }
+.bni::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:0; height:2px; background:var(--acc); border-radius:0 0 2px 2px; transition:width .2s; }
+.bni.on::before { width:32px; }
+.card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:16px; margin-bottom:14px; }
+.ct { font-size:13px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.sg { display:grid; gap:10px; margin-bottom:16px; }
+.sg2 { grid-template-columns:1fr 1fr; }
+.sg3 { grid-template-columns:1fr 1fr 1fr; }
+.sc { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:12px 14px; position:relative; overflow:hidden; }
+.sc::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.sc.bl::before{background:var(--acc)}.sc.gr::before{background:var(--g)}.sc.rd::before{background:var(--r)}.sc.yl::before{background:var(--y)}.sc.pp::before{background:var(--p)}.sc.og::before{background:var(--o)}
+.sl { font-size:10px; color:var(--t3); font-weight:500; text-transform:uppercase; letter-spacing:.4px; margin-bottom:3px; }
+.sv { font-size:20px; font-weight:800; font-family:var(--fm); letter-spacing:-1px; }
+.ss { font-size:10px; color:var(--t2); margin-top:2px; }
+.sh { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+.sht { font-size:15px; font-weight:800; letter-spacing:-.5px; }
+.shs { font-size:10px; color:var(--t3); margin-top:2px; }
+.tbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:center; }
+.sbox { flex:1; min-width:0; position:relative; }
+.sbox input { width:100%; padding:10px 14px 10px 36px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad2); color:var(--t1); font-family:var(--f); font-size:13px; outline:none; -webkit-appearance:none; }
+.sbox input:focus { border-color:var(--acc); }
+.sbox::before { content:'🔍'; position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:13px; }
+.chips { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.chips::-webkit-scrollbar { display:none; }
+.chip { flex-shrink:0; padding:7px 14px; background:var(--bg2); border:1px solid var(--border); border-radius:20px; color:var(--t2); font-family:var(--f); font-size:11px; font-weight:600; cursor:pointer; transition:.15s; white-space:nowrap; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+.chip:active { transform:scale(.96); }
+.chip.on { background:var(--glow); border-color:var(--acc); color:var(--acc); }
+select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad2); color:var(--t2); font-family:var(--f); font-size:11px; cursor:pointer; outline:none; -webkit-appearance:none; min-height:36px; }
+.tc-info { font-size:10px; color:var(--t3); font-family:var(--fm); padding:4px 0 8px; }
+.task-list { display:flex; flex-direction:column; gap:10px; }
+.task-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:14px; cursor:pointer; transition:.15s; position:relative; overflow:hidden; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.task-card::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; }
+.task-card.진행중::before { background:var(--acc); }
+.task-card.계획::before { background:var(--y); }
+.task-card.완료::before { background:var(--g); }
+.task-card:active { background:var(--bg3); transform:scale(.99); }
+.tc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.tc-title { font-size:13px; font-weight:600; line-height:1.4; flex:1; }
+.tc-badges { display:flex; gap:4px; flex-shrink:0; align-items:center; }
+.pill { display:inline-flex; padding:2px 8px; border-radius:16px; font-size:10px; font-weight:600; white-space:nowrap; }
+.pill.진행중{background:var(--glow);color:var(--acc)}.pill.계획{background:var(--y2);color:var(--y)}.pill.완료{background:var(--g2);color:var(--g)}.pill.미완료{background:var(--r2);color:var(--r)}
+.tc-meta { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+.tc-team { font-size:10px; padding:2px 8px; border-radius:4px; background:var(--bg3); color:var(--t2); font-weight:500; }
+.tc-ch { font-size:10px; padding:2px 6px; border-radius:4px; font-weight:600; }
+.tc-ch.경총 { background:var(--glow); color:var(--acc); }
+.tc-ch.영총 { background:var(--p2); color:var(--p); }
+.tc-mgr { font-size:10px; color:var(--t3); }
+.progress-wrap { display:flex; align-items:center; gap:8px; }
+.progress-bar { flex:1; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:3px; }
+.progress-pct { font-size:11px; font-weight:700; font-family:var(--fm); min-width:34px; text-align:right; }
+.ft-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:var(--rad2); border:1px solid var(--border); }
+.ft { width:100%; border-collapse:collapse; font-size:11.5px; min-width:500px; }
+.ft th { padding:8px 10px; text-align:right; font-weight:600; color:var(--t2); font-size:10px; border-bottom:2px solid var(--border); white-space:nowrap; background:var(--bg2); position:sticky; top:0; z-index:2; }
+.ft th:first-child { text-align:left; }
+.ft td { padding:8px 10px; text-align:right; border-bottom:1px solid rgba(42,54,80,.4); font-family:var(--fm); }
+.ft td:first-child { text-align:left; font-family:var(--f); font-weight:500; }
+.ft tr.tr { background:rgba(56,189,248,.04); font-weight:700; }
+.ft tr:hover { background:var(--bg3); }
+.pos{color:var(--g)}.neg{color:var(--r)}
+.br { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.bl_ { width:64px; font-size:10.5px; font-weight:500; text-align:right; color:var(--t2); flex-shrink:0; }
+.bt { flex:1; height:22px; background:var(--border); border-radius:4px; overflow:hidden; }
+.bf { height:100%; border-radius:4px; display:flex; align-items:center; padding:0 7px; font-size:9.5px; font-weight:600; font-family:var(--fm); color:#fff; min-width:fit-content; }
+.bv { width:52px; font-size:10.5px; font-family:var(--fm); text-align:right; color:var(--t2); flex-shrink:0; }
+.kpi-list { display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+.kc { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:14px; position:relative; overflow:hidden; }
+.kc::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; }
+.kr1::before{background:#fbbf24}.kr2::before{background:#94a3b8}.kr3::before{background:#b45309}.kr4::before{background:var(--acc)}.kr5::before{background:var(--p)}
+.kc-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.kn { font-size:15px; font-weight:700; }
+.krb { padding:3px 10px; border-radius:16px; font-size:12px; font-weight:700; font-family:var(--fm); }
+.r1{background:rgba(251,191,36,.15);color:#fbbf24}.r2{background:rgba(148,163,184,.15);color:#94a3b8}.r3{background:rgba(180,83,9,.15);color:#d97706}.r4{background:var(--glow);color:var(--acc)}.r5{background:var(--p2);color:var(--p)}
+.ks { font-size:36px; font-weight:900; font-family:var(--fm); letter-spacing:-2px; margin-bottom:10px; }
+.kbd { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px; }
+.km { text-align:center; padding:8px 4px; background:rgba(255,255,255,.02); border-radius:8px; }
+.kml { font-size:9px; color:var(--t3); font-weight:500; letter-spacing:.3px; }
+.kmv { font-size:15px; font-weight:700; font-family:var(--fm); margin-top:2px; }
+.smg { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+.smi { text-align:center; padding:5px 3px; background:rgba(255,255,255,.02); border-radius:6px; border:1px solid rgba(255,255,255,.04); }
+.smi-l { font-size:8px; color:var(--t3); font-weight:500; }
+.smi-v { font-size:12px; font-weight:700; font-family:var(--fm); margin-top:1px; }
+.hm { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; font-family:var(--fm); }
+.hm-h{background:rgba(52,211,153,.15);color:#34d399}.hm-m{background:rgba(251,191,36,.1);color:#fbbf24}.hm-l{background:rgba(248,113,113,.1);color:#f87171}
+.ai-c { display:flex; flex-direction:column; height:100%; }
+.ai-cfg { padding:14px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); margin-bottom:12px; }
+.ai-cfg-row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.ai-cfg label { font-size:11px; font-weight:600; color:var(--t2); }
+.ai-cfg input, .ai-cfg select { flex:1; padding:10px 12px; background:var(--bg0); border:1px solid var(--border); border-radius:var(--rad2); color:var(--t1); font-family:var(--fm); font-size:11px; outline:none; -webkit-appearance:none; min-height:40px; }
+.ai-status { display:flex; align-items:center; gap:6px; font-size:11px; }
+.ai-dot { width:8px; height:8px; border-radius:50%; background:var(--r); flex-shrink:0; }
+.ai-dot.on { background:var(--g); box-shadow:0 0 6px var(--g); }
+.quick-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+.ai-qb { padding:10px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad2); color:var(--t2); font-family:var(--f); font-size:11px; font-weight:500; cursor:pointer; transition:.15s; text-align:left; line-height:1.3; }
+.ai-qb:active { border-color:var(--acc); color:var(--acc); background:var(--glow); transform:scale(.98); }
+.ai-msgs { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:10px; padding:14px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad) var(--rad) 0 0; min-height:200px; max-height:calc(100dvh - 420px); }
+.msg { max-width:88%; padding:10px 13px; border-radius:12px; font-size:12.5px; line-height:1.6; white-space:pre-wrap; }
+.msg.u { align-self:flex-end; background:var(--acc); color:#0a0e17; font-weight:500; border-bottom-right-radius:3px; }
+.msg.a { align-self:flex-start; background:var(--bg3); border:1px solid var(--border); border-bottom-left-radius:3px; }
+.msg.s { align-self:center; background:var(--y2); color:var(--y); font-size:11px; border:1px solid rgba(251,191,36,.2); text-align:center; }
+.msg.ok { align-self:center; background:var(--g2); color:var(--g); font-size:11px; border:1px solid rgba(52,211,153,.2); }
+.ai-ia { display:flex; gap:8px; padding:10px 12px; background:var(--bg2); border:1px solid var(--border); border-top:none; border-radius:0 0 var(--rad) var(--rad); }
+.ai-ia textarea { flex:1; padding:9px 12px; background:var(--bg0); border:1px solid var(--border); border-radius:var(--rad2); color:var(--t1); font-family:var(--f); font-size:13px; resize:none; outline:none; height:40px; line-height:1.4; }
+.ai-sb { padding:9px 16px; background:var(--acc); color:#0a0e17; border:none; border-radius:var(--rad2); font-family:var(--f); font-size:13px; font-weight:700; cursor:pointer; flex-shrink:0; }
+.ai-sb:disabled { opacity:.5; }
+.ai-conn-btn { padding:9px 16px; background:linear-gradient(135deg,#059669,#34d399); color:#fff; border:none; border-radius:var(--rad2); font-family:var(--f); font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; min-height:40px; }
+.ai-conn-btn.connected { background:linear-gradient(135deg,#0284c7,#38bdf8); }
+.up-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:16px; margin-bottom:14px; }
+.up-card h3 { font-size:13px; font-weight:700; margin-bottom:4px; }
+.up-card .desc { font-size:11px; color:var(--t3); margin-bottom:12px; }
+.up-zone { border:2px dashed var(--border); border-radius:var(--rad2); padding:32px 20px; text-align:center; cursor:pointer; transition:.2s; background:var(--bg0); }
+.up-zone:active, .up-zone.drag { border-color:var(--acc); background:var(--glow); }
+.up-zone h4 { font-size:13px; margin-bottom:6px; }
+.up-zone p { font-size:11px; color:var(--t3); }
+.up-zone input { display:none; }
+.up-status { margin-top:10px; padding:10px 14px; border-radius:var(--rad2); font-size:12px; display:none; }
+.up-status.ok{display:block;background:var(--g2);color:var(--g);border:1px solid rgba(52,211,153,.2)}
+.up-status.err{display:block;background:var(--r2);color:var(--r);border:1px solid rgba(248,113,113,.2)}
+.rpt-sheet { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:300; display:none; align-items:flex-end; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+.rpt-sheet.show { display:flex; }
+.rpt-inner { width:100%; background:var(--bg1); border-radius:20px 20px 0 0; padding:20px 20px calc(20px+var(--safe-bottom)); border-top:1px solid var(--border); animation:slideUp .3s ease; }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.rpt-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+.rpt-title { font-size:15px; font-weight:700; margin-bottom:14px; }
+.rpt-btn-list { display:flex; flex-direction:column; gap:8px; }
+.rpt-btn { padding:14px 16px; border-radius:var(--rad2); border:none; font-family:var(--f); font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left; -webkit-tap-highlight-color:transparent; }
+.rpt-btn:active { filter:brightness(1.15); transform:scale(.98); }
+.rpt-btn.green { background:linear-gradient(135deg,#059669,#10b981); color:#fff; }
+.rpt-btn.blue { background:linear-gradient(135deg,#0284c7,#38bdf8); color:#fff; }
+.rpt-btn.purple { background:linear-gradient(135deg,#7c3aed,#a78bfa); color:#fff; }
+.rpt-btn.orange { background:linear-gradient(135deg,#c2410c,#fb923c); color:#fff; }
+.rpt-btn.teal { background:linear-gradient(135deg,#0f766e,#14b8a6); color:#fff; }
+.rpt-cancel { padding:13px; border-radius:var(--rad2); border:none; background:var(--bg3); color:var(--t2); font-family:var(--f); font-size:13px; font-weight:600; cursor:pointer; margin-top:4px; }
+.fab { position:fixed; right:16px; bottom:calc(var(--nav-h)+var(--safe-bottom)+12px); width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,var(--acc),#818cf8); border:none; color:#fff; font-size:22px; cursor:pointer; box-shadow:0 4px 20px rgba(56,189,248,.4); display:flex; align-items:center; justify-content:center; z-index:150; transition:.2s; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.fab:active { transform:scale(.92); }
+.mo { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:400; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); align-items:flex-end; }
+.mo.show { display:flex; }
+.mc { width:100%; background:var(--bg1); border-radius:20px 20px 0 0; padding:20px 20px calc(20px+var(--safe-bottom)); border-top:1px solid var(--border); max-height:85vh; overflow-y:auto; -webkit-overflow-scrolling:touch; animation:slideUp .3s ease; }
+.mo-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 16px; }
+.mh { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+.mt_ { font-size:15px; font-weight:700; line-height:1.4; flex:1; padding-right:8px; }
+.mx { background:var(--bg3); border:none; color:var(--t2); font-size:18px; cursor:pointer; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.mm { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+.mmi { display:flex; flex-direction:column; gap:2px; }
+.mml { font-size:10px; color:var(--t3); font-weight:500; text-transform:uppercase; letter-spacing:.4px; }
+.mmv { font-size:12px; font-weight:600; }
+.ms { margin-bottom:12px; }
+.mst { font-size:10px; font-weight:700; color:var(--acc); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+.msc { font-size:12px; line-height:1.7; color:var(--t2); white-space:pre-wrap; background:var(--bg2); padding:11px 13px; border-radius:var(--rad2); border:1px solid var(--border); }
+.sec-hdr { display:flex; align-items:center; justify-content:space-between; cursor:pointer; padding:14px 0 8px; border-bottom:1px solid var(--border); margin-bottom:14px; -webkit-tap-highlight-color:transparent; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+.sec-hdr .st { font-size:13px; font-weight:700; }
+.sec-hdr .sa { color:var(--t3); font-size:14px; transition:transform .2s; }
+.sec-hdr.closed .sa { transform:rotate(-90deg); }
+.sec-body.hidden { display:none; }
+@media(min-width:768px) {
+  .pnl { max-width:600px; margin:0 auto; }
+  .bnav { max-width:600px; left:50%; transform:translateX(-50%); border-radius:20px 20px 0 0; }
+  .fab { right:calc(50% - 300px + 16px); }
+  .mo .mc, .rpt-inner { max-width:600px; margin:0 auto; border-radius:20px 20px 0 0; }
+}
+.rpt-viewer { display:none; position:fixed; inset:0; z-index:500; background:#fff; flex-direction:column; }
+.rpt-viewer.show { display:flex; }
+.rpt-viewer-hdr { display:flex; align-items:center; gap:10px; padding:calc(var(--safe-top)+10px) 16px 10px; background:#0369a1; color:#fff; flex-shrink:0; }
+.rpt-viewer-back { background:rgba(255,255,255,.2); border:none; color:#fff; padding:8px 14px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; font-family:var(--f); white-space:nowrap; touch-action:manipulation; }
+.rpt-viewer-title { flex:1; font-size:14px; font-weight:700; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rpt-viewer-print { background:rgba(255,255,255,.2); border:none; color:#fff; width:38px; height:38px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.rpt-viewer-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:#fff; }
+.rpt-viewer-body iframe { width:100%; height:100%; border:none; }
+</style>
+</head>
+<body>
+<div class="app">
+<header class="hdr">
+  <div class="hdr-inner">
+    <div class="logo"><div class="logo-i">M</div>KT M&S 경영관리</div>
+    <span class="hdr-badge">2026.01</span>
+  </div>
+</header>
+<div class="main">
+
+<!-- TASKS -->
+<div class="pnl on" id="t-tasks">
+  <div class="sg sg2" id="taskStats"></div>
+  <div class="tbar"><div class="sbox"><input type="text" id="tSrch" placeholder="과제명, 팀명, 담당자..."></div></div>
+  <div class="chips" id="chFilter"></div>
+  <div style="height:8px"></div>
+  <div class="chips" id="stFilter"></div>
+  <div style="height:10px"></div>
+  <div style="display:flex;gap:8px">
+    <select class="fs" id="tmFilter" style="flex:1"><option value="all">전체 팀</option></select>
+    <select class="fs" id="crFilter"><option value="all">전체</option><option value="core">핵심만</option></select>
+  </div>
+  <div class="tc-info" id="tCnt"></div>
+  <div class="task-list" id="tBody"></div>
+</div>
+
+<!-- PROFIT -->
+<div class="pnl" id="t-profit">
+  <div class="sh"><div><div class="sht">BM별 이익계산서</div><div class="shs">'26년 1월 기준 · 단위: 백만원</div></div></div>
+  <div class="sg sg2" id="profStats"></div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">📊 채널별 매출/영업이익</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card"><div class="ct">채널별 매출</div><div id="revChart"></div></div>
+    <div class="card"><div class="ct">채널별 영업이익</div><div id="opChart"></div></div>
+  </div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">📑 채널별 손익 상세</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th style="min-width:80px">구분</th><th>합계</th><th>소매</th><th>도매</th><th>디지털</th><th>기업</th><th>IoT</th><th>법인</th><th>소상공</th>
+      </tr></thead><tbody id="fBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">🏢 본부별 손익</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th style="min-width:72px">본부</th><th>매출</th><th>총이익</th><th>판관비</th><th>영업이익</th><th>이익률</th>
+      </tr></thead><tbody id="hqBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">💰 판관비 구조 분석</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card"><div class="ct">판관비 항목별 비중</div><div id="sgaChart"></div></div>
+    <div class="card"><div class="ct">채널별 비용 효율 (인건비/판촉비율)</div><div id="costEffChart"></div></div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="pnl" id="t-kpi">
+  <div class="sh"><div><div class="sht">조직 KPI 분석</div><div class="shs">'26년 1Q · 소매60%+도매30%+소상공10%</div></div></div>
+  <div class="kpi-list" id="kpiCards"></div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">🏪 소매 KPI 세부지표</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th style="min-width:64px">본부</th><th>합계</th><th>후불</th><th>MNP</th><th>유선</th><th>MIT</th><th>R-VOC</th><th>TCSI</th><th>이익</th>
+      </tr></thead><tbody id="rtBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">🏬 도매 KPI 세부지표</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th style="min-width:64px">본부</th><th>합계</th><th>후불</th><th>MNP</th><th>유선</th><th>R-VOC</th><th>인프라</th><th>이익</th>
+      </tr></thead><tbody id="whBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">🎯 강약점 히트맵</span><span class="sa">▼</span></div>
+  <div class="sec-body">
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th style="min-width:64px">본부</th><th>종합</th><th>소매</th><th>도매</th><th>소상공</th><th>약점</th>
+      </tr></thead><tbody id="hmBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="card"><div class="ct">🏆 종합 순위</div><div id="kRank"></div></div>
+  <div class="card"><div class="ct">📈 편차 분석</div><div id="kVar"></div></div>
+</div>
+
+<!-- AI -->
+<div class="pnl" id="t-ai">
+  <div class="ai-c">
+    <div class="ai-cfg">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:700">🤖 AI 분석 엔진</span>
+        <div class="ai-status"><div class="ai-dot" id="aiDot"></div><span id="aiStatusTxt" style="font-size:11px">미연결</span></div>
+      </div>
+      <div class="ai-cfg-row">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+      </div>
+      <div class="ai-cfg-row">
+        <label>Model</label>
+        <select id="aiMdl" style="flex:1;padding:8px;background:var(--bg0);border:1px solid var(--border);border-radius:var(--rad2);color:var(--t1);outline:none">
+          <option value="claude-sonnet-4-20250514">Sonnet 4</option>
+          <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
+        </select>
+        <button class="ai-conn-btn" id="aiConnBtn" onclick="testApiConnection()">🔌 연결</button>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:600;color:var(--t2)">⚡ 빠른 분석</span>
+      <button onclick="clearAI()" style="font-size:10px;padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--t3);cursor:pointer">초기화</button>
+    </div>
+    <div class="quick-grid">
+      <button class="ai-qb" onclick="quickAI('[경영현황] 전사 손익·KPI·과제 현황을 Executive Summary 형식으로 요약하고, 핵심 리스크 3가지와 즉시 실행 권고안을 제시해줘')">📋 경영현황 요약</button>
+      <button class="ai-qb" onclick="quickAI('[수익성분석] 채널별 영업이익률을 비교하고, 구조적 원인(비용구조/매출믹스)을 분석한 뒤 개선 우선순위와 구체적 액션을 제시해줘')">💰 수익성 원인분석</button>
+      <button class="ai-qb" onclick="quickAI('[KPI편차] 5개 본부의 소매·도매·소상공인 KPI 편차 원인을 채널별로 구분하여 분석하고, 각 본부의 핵심 약점과 개선 방향을 수치 근거와 함께 제시해줘')">🎯 KPI 편차 원인</button>
+      <button class="ai-qb" onclick="quickAI('[액션플랜] 각 본부(강서/동부/서부/강북/강남)별로 KPI 개선을 위한 맞춤 액션플랜을 수립해줘. 각 본부당: ①현재 강약점 ②우선 개선 지표 ③즉시실행(1개월) ④단기과제(3개월) ⑤목표점수 포함')">🏢 본부별 액션플랜</button>
+      <button class="ai-qb" onclick="quickAI('[리스크워치] 법인영업 수수료 구조, 디지털 판촉비 집중, 소상공인 KPI 편차, 과제 저추진 현황을 종합하여 HIGH/MED/LOW 리스크 워치리스트를 작성하고 각 리스크별 대응 방안을 제시해줘')">⚠️ 리스크 워치리스트</button>
+      <button class="ai-qb" onclick="quickAI('[투자심의] 현재 손익·KPI 데이터를 기반으로 채널·본부별 투자/자원 배분 우선순위를 분석해줘. ROI 관점 논거와 함께 제시해줘')">💡 투자우선순위</button>
+    </div>
+    <div class="ai-msgs" id="aiMsg">
+      <div class="msg s">💡 API 연결 후 대시보드 데이터 기반 AI 심층 분석이 가능합니다.</div>
+    </div>
+    <div class="ai-ia">
+      <textarea id="aiIn" placeholder="분석 질문 입력..." rows="1"></textarea>
+      <button class="ai-sb" id="aiBtn" onclick="sendAI()">전송</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="pnl" id="t-upload">
+  <div class="sh"><div><div class="sht">월간 데이터 업로드</div><div class="shs">엑셀 파일 업로드 → 자동 갱신</div></div></div>
+  <div class="up-card">
+    <h3>📋 사업과제 이행점검</h3>
+    <div class="desc">팀별 사업과제 합본 파일 (.xlsx) — data 시트</div>
+    <div class="up-zone" id="upTask" onclick="document.getElementById('fTask').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'task')">
+      <h4>📁 탭하여 파일 선택</h4><p>사업과제 이행점검 Excel</p>
+      <input type="file" id="fTask" accept=".xlsx,.xls" onchange="handleFile(this,'task')">
+    </div>
+    <div class="up-status" id="sTask"></div>
+  </div>
+  <div class="up-card">
+    <h3>📊 BM별 이익계산서</h3>
+    <div class="desc">BM별 이익계산서 파일 (.xlsx)</div>
+    <div class="up-zone" id="upProfit" onclick="document.getElementById('fProfit').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'profit')">
+      <h4>📁 탭하여 파일 선택</h4><p>BM별 이익계산서 Excel</p>
+      <input type="file" id="fProfit" accept=".xlsx,.xls" onchange="handleFile(this,'profit')">
+    </div>
+    <div class="up-status" id="sProfit"></div>
+  </div>
+  <div class="up-card">
+    <h3>🎯 조직 KPI 마감</h3>
+    <div class="desc">조직 KPI 마감 파일 (.xlsx)</div>
+    <div class="up-zone" id="upKpi" onclick="document.getElementById('fKpi').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'kpi')">
+      <h4>📁 탭하여 파일 선택</h4><p>조직 KPI 마감 Excel</p>
+      <input type="file" id="fKpi" accept=".xlsx,.xls" onchange="handleFile(this,'kpi')">
+    </div>
+    <div class="up-status" id="sKpi"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<nav class="bnav">
+  <button class="bni on" data-t="tasks" onclick="switchTab(this)"><span class="ico">📋</span><span class="lbl">과제관리</span></button>
+  <button class="bni" data-t="profit" onclick="switchTab(this)"><span class="ico">📊</span><span class="lbl">BM이익</span></button>
+  <button class="bni" data-t="kpi" onclick="switchTab(this)"><span class="ico">🎯</span><span class="lbl">KPI분석</span></button>
+  <button class="bni" data-t="ai" onclick="switchTab(this)"><span class="ico">🤖</span><span class="lbl">AI분석</span></button>
+  <button class="bni" data-t="upload" onclick="switchTab(this)"><span class="ico">📤</span><span class="lbl">업로드</span></button>
+</nav>
+
+<button class="fab" onclick="showRptSheet()" title="보고서">📄</button>
+
+<div class="rpt-sheet" id="rptSheet" onclick="if(event.target===this)hideRptSheet()">
+  <div class="rpt-inner">
+    <div class="rpt-handle"></div>
+    <div class="rpt-title" id="rptSheetTitle">보고서 생성</div>
+    <div class="rpt-btn-list" id="rptBtnList"></div>
+    <button class="rpt-cancel" onclick="hideRptSheet()">취소</button>
+  </div>
+</div>
+
+<div class="mo" id="modal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="mc"><div class="mo-handle"></div><div id="modalC"></div></div>
+</div>
+
+<div class="rpt-viewer" id="rptViewer">
+  <div class="rpt-viewer-hdr">
+    <button class="rpt-viewer-back" onclick="closeReportViewer()">← 닫기</button>
+    <div class="rpt-viewer-title" id="rptViewerTitle">보고서</div>
+    <button class="rpt-viewer-print" onclick="printReport()">🖨️</button>
+  </div>
+  <div class="rpt-viewer-body" id="rptViewerBody"></div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const D = {
+tasks: [{"no":1,"ch":"경총","tm":"경영기획팀","co":"●","nm":"내부 KPI 프로세스 수립/이행 점검","mg":"김장현","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0.3,"plan":"① 목적 : 현장 중심, 유통전략 정합성 높은 KPI 체계 재정립\n② 조직/본부/지사/점단위 KPI 기준 정립 및 이행 밀착 점검\n③ 실행 : '26.1월 부로 실행","pg":"- 1H KPI 운영(안) 초안 사전 공유 완료 (1월 12일)\n- B2B KPI 적용 방안 논의 진행 예정 (2월 12일)\n- 임원·본부·지사·팀·점 단위 KPI 기준 정립 추진 중"},{"no":6,"ch":"경총","tm":"경영기획팀","co":"●","nm":"구조개선 컨트롤 타워 역할 수행","mg":"전홍준/이수용","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"① 사업 이슈별 손익 분석 통한 재무적 영향도 분석\n② 수익성 검토 기반 직영 유통 구조 개선 지원","pg":"- 2주차 선마감 (25년 연마감 163억)\n- 도매 위탁대가/엣지 협의, 위탁비 정산(10.3억)\n- 유통플랫폼 사업별 손익 마감"},{"no":2,"ch":"경총","tm":"경영기획팀","co":"","nm":"경영정보 고도화 / AX화","mg":"최소휘/김장현/우상범","sc":"'26.01.01~'26.02.28","st":"진행중","cp":"미완료","pp":0.1,"plan":"① AI 활용 경영진 의사결정 필요 정보 제공\n② Factbook기반 경영정보(재무,가입자,Infra,인력 등)","pg":"- 경영정보시스템 1차 미팅 완료 (1월 15일)\n- 6개 분야 데이터 항목 정의\n- UI 구상 진행"},{"no":3,"ch":"경총","tm":"경영기획팀","co":"","nm":"사업 투자심의 메트릭스 구축/적용","mg":"김장현","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":"- 사전평가/정식 심의 평가 매트릭스 구조 체계 초안 정립"},{"no":4,"ch":"경총","tm":"경영기획팀","co":"","nm":"결산마감 일정 단축","mg":"이수용","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.8,"plan":"","pg":"- 2월 2주차 가마감(11일) → BM별 영업이익 가마감 선보고(13일)"},{"no":5,"ch":"경총","tm":"경영기획팀","co":"","nm":"대내외 커뮤니케이션","mg":"전재원/전홍준","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":"- 25년 경영평가 관련 전략실 시너지경영 담당 미팅"},{"no":7,"ch":"경총","tm":"경영기획팀","co":"","nm":"Risk Zero TF 운영","mg":"최소휘","sc":"'25.11.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":"- 리스크관리위원회 운영 계획 보고 완료"},{"no":8,"ch":"경총","tm":"회계세무팀","co":"●","nm":"자금업무 고도화","mg":"강현명/전하형","sc":"'25.12.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":"- 1월 주요 지급: 단말기 매입 301억, DC 79억, 교육청 54억"},{"no":9,"ch":"경총","tm":"회계세무팀","co":"●","nm":"AI를 활용한 전표 작성","mg":"강재준/박상윤","sc":"'26.02.01~'26.12.31","st":"계획","cp":"미완료","pp":0,"plan":"","pg":"2월 추진예정"},{"no":10,"ch":"경총","tm":"회계세무팀","co":"","nm":"재무건전성 개선","mg":"박상윤/전하형","sc":"'25.12.01~'26.03.31","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":"- 무상감자 추진: 보통주 3주→1주 병합\n- KT 재무실 소통 완료, 1차 이사회 가결"},{"no":11,"ch":"경총","tm":"회계세무팀","co":"","nm":"AI를 활용한 내부회계 관리","mg":"강미경/이정하","sc":"'26.02.01~'26.12.31","st":"계획","cp":"미완료","pp":0,"plan":"","pg":"2월 추진예정"},{"no":12,"ch":"경총","tm":"회계세무팀","co":"","nm":"재무 리스크 관리","mg":"강재준/강현명/이정하","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":"- 자금 불시 모니터링(1/29) 이상없음 결론\n- ERP 대개체 요구사항 정리 완료"},{"no":13,"ch":"경총","tm":"회계세무팀","co":"","nm":"경영진 의사결정 지원 및 비용절감","mg":"이정하/강미경","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":"- 리본 미리보상 경제성 분석 완료\n- 구매전용카드 수수료 인하(0.05~0.08%p↓)"},{"no":14,"ch":"경총","tm":"인사팀","co":"●","nm":"리더십 교육 프로그램 운영","mg":"김준혁","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":"- 변화·혁신 리더십 프로그램 시행(1/12~)"},{"no":15,"ch":"경총","tm":"인사팀","co":"●","nm":"사내근로복지기금 도입","mg":"김창호/박봉식/김유리","sc":"'26.06.01~'26.12.31","st":"계획","cp":"미완료","pp":0.1,"plan":"","pg":"- 고용노동부 자료 확인 후 자문 진행 예정"},{"no":16,"ch":"경총","tm":"인사팀","co":"","nm":"New E-HR 시스템 도입","mg":"오시형/목진우/정혜수","sc":"'26.02.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":17,"ch":"경총","tm":"인사팀","co":"","nm":"영업직 스탭 직무수당 시행","mg":"김창호/오시형/박봉식/김유리","sc":"'26.01.01~'26.12.31","st":"완료","cp":"완료","pp":1,"plan":"","pg":"- 영업직 개인별 역량에 따라 직무수당 확정 및 지급 완료"},{"no":18,"ch":"경총","tm":"인사팀","co":"","nm":"문제해결 워크샵 시행","mg":"김준혁","sc":"'26.04.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":"- 1차 시행 : 상권팀장 및 세강 역할/처우 개선 토론(1/8)"},{"no":19,"ch":"경총","tm":"인사팀","co":"","nm":"전문대 현장실습 확대","mg":"김동옥/김준혁/김예원","sc":"'26.06.01~'26.09.30","st":"계획","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":20,"ch":"경총","tm":"인사팀","co":"","nm":"본사 주도 정기채용 시행","mg":"김동옥/김준혁/김예원","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":21,"ch":"경총","tm":"인사팀","co":"","nm":"상권팀장 조직화 및 R&R 정의","mg":"김창호/오시형/목진우","sc":"'26.02.01~'26.12.31","st":"완료","cp":"완료","pp":1,"plan":"","pg":""},{"no":22,"ch":"경총","tm":"경영지원팀","co":"●","nm":"자산관리시스템 구축","mg":"이재연","sc":"'25.12.08~'26.06.30","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":23,"ch":"경총","tm":"경영지원팀","co":"●","nm":"차량관제시스템 및 랩핑 적용","mg":"최익환","sc":"'26.03.01~'26.06.30","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":24,"ch":"경총","tm":"경영지원팀","co":"","nm":"전자계약 시스템 구축","mg":"이재연","sc":"'25.12.08~'26.06.30","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":25,"ch":"경총","tm":"경영지원팀","co":"","nm":"업무용 차량 AI카메라 모니터링","mg":"최익환","sc":"'26.03.01~'26.06.30","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":26,"ch":"경총","tm":"경영지원팀","co":"","nm":"위험성 평가 전사 확대","mg":"최익환","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":27,"ch":"경총","tm":"경영지원팀","co":"","nm":"심리케어 프로그램 운영","mg":"조문영","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":28,"ch":"경총","tm":"경영지원팀","co":"","nm":"단체교섭 법적절차 준수","mg":"이선표","sc":"'26.01.01~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":29,"ch":"경총","tm":"경영지원팀","co":"","nm":"업무용 차량 최적화","mg":"최익환","sc":"'26.03.01~'26.06.30","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":30,"ch":"경총","tm":"경영지원팀","co":"","nm":"내방객 AI 분석 시스템 구축","mg":"최익환","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":31,"ch":"경총","tm":"경영지원팀","co":"","nm":"5대 핵심 방향 및 15대 과제 이행","mg":"김하은","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":32,"ch":"경총","tm":"경영지원팀","co":"","nm":"디지털 소통 문화 구축","mg":"김하은","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":33,"ch":"경총","tm":"경영지원팀","co":"","nm":"사회공헌활동 강화 및 근무환경 개선","mg":"김하은","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":34,"ch":"경총","tm":"경영지원팀","co":"","nm":"홍보 강화","mg":"이재연","sc":"'25.12.08~'26.12.31","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":35,"ch":"경총","tm":"IT보안팀","co":"●","nm":"본부/지사 네트워크 개선","mg":"윤영철","sc":"'26.01.01~'26.04.30","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":36,"ch":"경총","tm":"IT보안팀","co":"●","nm":"자체 DRM 관리시스템 구축","mg":"김봉석","sc":"'25.11.01~'26.04.30","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":""},{"no":37,"ch":"경총","tm":"IT보안팀","co":"","nm":"쿠폰팩 운영 시스템 구축","mg":"김흥태","sc":"26.01~05.31","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":38,"ch":"경총","tm":"IT보안팀","co":"","nm":"현장 중심 IT서비스 개선","mg":"김흥태","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":39,"ch":"경총","tm":"IT보안팀","co":"","nm":"클라우드 웹서비스 보안체계 강화","mg":"권성원","sc":"'26.01~'26.08","st":"진행중","cp":"미완료","pp":0.25,"plan":"","pg":""},{"no":40,"ch":"경총","tm":"IT보안팀","co":"","nm":"AI기반 통합로그솔루션 전환","mg":"권성원","sc":"26.03~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":41,"ch":"경총","tm":"IT보안팀","co":"","nm":"노후 보안장비 대개체","mg":"권성원","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":42,"ch":"경총","tm":"IT보안팀","co":"","nm":"모바일MOS고도화 물류센터 업무개선","mg":"김흥태","sc":"'26.01~'26.06","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":43,"ch":"경총","tm":"IT보안팀","co":"","nm":"위험성 평가 시스템 구축","mg":"김흥태","sc":"'26.01~'26.06","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":44,"ch":"경총","tm":"IT보안팀","co":"","nm":"HR시스템 고도화","mg":"윤영철","sc":"미정","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":45,"ch":"경총","tm":"IT보안팀","co":"","nm":"ERP 보안 Risk 해소","mg":"김흥태","sc":"'26.01~'26.03","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":46,"ch":"경총","tm":"IT보안팀","co":"","nm":"서버 OS 업그레이드","mg":"김흥태","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":47,"ch":"경총","tm":"AI확산팀","co":"●","nm":"[Nexus 고도화] 엑셀data 처리","mg":"이학선","sc":"'26.01~'26.02","st":"진행중","cp":"미완료","pp":0.8,"plan":"","pg":""},{"no":48,"ch":"경총","tm":"AI확산팀","co":"●","nm":"[대외확산] Nexus 대외확산","mg":"최은열","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":49,"ch":"경총","tm":"AI확산팀","co":"","nm":"[Nexus] SNS취합 AI활용","mg":"이학선","sc":"'26.03~'26.05","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":50,"ch":"경총","tm":"AI확산팀","co":"","nm":"[Nexus] 서버 이중화","mg":"이학선","sc":"'26.06","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":51,"ch":"경총","tm":"AI확산팀","co":"","nm":"AI앰배서더 운영","mg":"신동주","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":52,"ch":"경총","tm":"AI확산팀","co":"","nm":"AI인플루언서 운영","mg":"정예린","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":53,"ch":"경총","tm":"AI확산팀","co":"","nm":"전직원 Nexus AI의무수강","mg":"정예린/신동주","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":54,"ch":"경총","tm":"AI확산팀","co":"","nm":"AI컬처챌린지","mg":"정예린","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":55,"ch":"경총","tm":"플랫폼사업1팀","co":"●","nm":"KT플라자 브랜드 마케팅①","mg":"이규민/최윤정","sc":"'25.10~'26.12","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":56,"ch":"경총","tm":"플랫폼사업1팀","co":"●","nm":"KT플라자 브랜드 마케팅②","mg":"이규민","sc":"'25.11~'26.12","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":57,"ch":"경총","tm":"플랫폼사업1팀","co":"","nm":"KT플라자 브랜드 마케팅③","mg":"최윤정","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":58,"ch":"경총","tm":"플랫폼사업1팀","co":"","nm":"디지털 마케팅 지표 관리","mg":"김상현","sc":"'25.12~'26.12","st":"계획","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":59,"ch":"경총","tm":"플랫폼사업1팀","co":"","nm":"코코넛 허브 재고 관리","mg":"김상현","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":60,"ch":"경총","tm":"플랫폼사업2팀","co":"●","nm":"매입처 다변화","mg":"정윤환/강민경","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.08,"plan":"","pg":""},{"no":61,"ch":"경총","tm":"플랫폼사업2팀","co":"●","nm":"매각채널 다각화","mg":"윤상돈/강민경","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.08,"plan":"","pg":""},{"no":62,"ch":"경총","tm":"모바일파트","co":"●","nm":"중고폰 활용 통신 가입자 확보","mg":"김운용/지예성/박동근","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.9,"plan":"","pg":""},{"no":63,"ch":"경총","tm":"모바일파트","co":"","nm":"매장 홍보/마케팅 실험실","mg":"지예성/유연수","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":1,"plan":"","pg":""},{"no":64,"ch":"경총","tm":"모바일파트","co":"","nm":"중고폰 생태계 구축","mg":"김운용/지예성/박동근","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":1,"plan":"","pg":""},{"no":65,"ch":"영총","tm":"영업기획팀","co":"●","nm":"AI기반 영업관리 데이터Core개발","mg":"최동연/최명일","sc":"'25.12~'26.01","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":66,"ch":"영총","tm":"영업기획팀","co":"●","nm":"매장 300점 확대","mg":"한현구","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":67,"ch":"영총","tm":"영업기획팀","co":"","nm":"신동 3.0 완성","mg":"임나현","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":68,"ch":"영총","tm":"영업기획팀","co":"","nm":"미래전략TF운영","mg":"권순욱/김성욱","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":69,"ch":"영총","tm":"영업기획팀","co":"","nm":"현장 소통 문화","mg":"김성욱","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":70,"ch":"영총","tm":"현장지원팀","co":"●","nm":"상시 재고 점검단 운영","mg":"박준수","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":71,"ch":"영총","tm":"현장지원팀","co":"●","nm":"엣지 프로그램 2.0 시행","mg":"김해원","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":72,"ch":"영총","tm":"현장지원팀","co":"","nm":"AI 재고 분석 효율화","mg":"김민석","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":73,"ch":"영총","tm":"현장지원팀","co":"","nm":"고객후기 AI분석 맞춤 코칭","mg":"채햇님","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.6,"plan":"","pg":""},{"no":74,"ch":"영총","tm":"현장지원팀","co":"","nm":"지방배송 프로세스 개선","mg":"김민석","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0.4,"plan":"","pg":""},{"no":75,"ch":"영총","tm":"현장지원팀","co":"","nm":"물류센터 UPH 개선","mg":"김민석","sc":"'25.12~'26.01","st":"완료","cp":"완료","pp":1,"plan":"","pg":""},{"no":76,"ch":"영총","tm":"영업품질팀","co":"●","nm":"도매 패스트트랙제 도입/운영","mg":"이준엽","sc":"'26.01~","st":"완료","cp":"완료","pp":1,"plan":"","pg":""},{"no":77,"ch":"영총","tm":"영업품질팀","co":"●","nm":"부정행위 리스크 제로 패키지","mg":"이준엽/오수희","sc":"'26.01~","st":"완료","cp":"완료","pp":1,"plan":"","pg":""},{"no":78,"ch":"영총","tm":"영업품질팀","co":"","nm":"AI기반 현장 VOC 대응 강화","mg":"한승용","sc":"'26.01~'26.03","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":79,"ch":"영총","tm":"영업품질팀","co":"","nm":"소매 영업품질 등급제","mg":"이준엽","sc":"'26.01~","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":80,"ch":"영총","tm":"영업품질팀","co":"","nm":"찾아가는 영업품질 소통 투어","mg":"한승용","sc":"'26.01~","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":81,"ch":"영총","tm":"영업품질팀","co":"","nm":"정보보호 전문가 육성","mg":"이인기","sc":"'26.01~'26.06","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":82,"ch":"영총","tm":"영업품질팀","co":"","nm":"고객 민감정보 위반 제로화","mg":"이인기","sc":"'26.01~","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":83,"ch":"영총","tm":"역량강화팀","co":"●","nm":"AX 역량강화 생태계 구축","mg":"하보라/정동헌","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":84,"ch":"영총","tm":"역량강화팀","co":"●","nm":"역량 혁신 Scale UP","mg":"국민정/류나윤","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":""},{"no":85,"ch":"영총","tm":"역량강화팀","co":"","nm":"실전 세일즈 끝장 교육","mg":"장대성/하보라/이충만/정동헌","sc":"'26.02~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":86,"ch":"영총","tm":"역량강화팀","co":"","nm":"기본기 강화 끝장 교육","mg":"김영수/장대성","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":""},{"no":87,"ch":"영총","tm":"역량강화팀","co":"","nm":"역량강화 현장 이음 활동","mg":"김영수/국민정/류나윤","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":88,"ch":"영총","tm":"디지털강화팀","co":"●","nm":"AI 고객 상담 시스템 구축","mg":"류세종","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":89,"ch":"영총","tm":"디지털강화팀","co":"●","nm":"유선 판매기회/제휴채널 확대","mg":"김은희","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":90,"ch":"영총","tm":"디지털강화팀","co":"","nm":"AI기반 고객 추천/접수 자동화","mg":"문주현","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":91,"ch":"영총","tm":"디지털강화팀","co":"","nm":"핵심 제휴처 추가 발굴","mg":"오응석","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.2,"plan":"","pg":""},{"no":92,"ch":"영총","tm":"디지털강화팀","co":"","nm":"주말배송 확대","mg":"류세종","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":93,"ch":"영총","tm":"디지털강화팀","co":"","nm":"KT닷컴 SNS 홍보 강화","mg":"나재준","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":94,"ch":"영총","tm":"소매강화팀","co":"●","nm":"AI 와플 지존 구축","mg":"권종호/강홍주","sc":"'26.01~'26.03","st":"계획","cp":"미완료","pp":0.05,"plan":"","pg":""},{"no":95,"ch":"영총","tm":"소매강화팀","co":"●","nm":"AI소매 운영 나침반","mg":"전 팀원","sc":"'26.01~'26.03","st":"계획","cp":"미완료","pp":0.05,"plan":"","pg":""},{"no":96,"ch":"영총","tm":"소매강화팀","co":"","nm":"점 예산/인센 MOS 전산화","mg":"노쥬리","sc":"'25.10~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":97,"ch":"영총","tm":"소매강화팀","co":"","nm":"중고시장 공략","mg":"백승빈/남기세","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":98,"ch":"영총","tm":"소매강화팀","co":"","nm":"외국인 실적 50% 증대","mg":"백승빈/남기세","sc":"'26.01~'26.03","st":"계획","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":99,"ch":"영총","tm":"소매강화팀","co":"","nm":"생산성 향상 프로그램 고도화","mg":"백승빈/남기세/김재선","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":100,"ch":"영총","tm":"소매강화팀","co":"","nm":"유선 전문매장 육성","mg":"류병재/홍송표","sc":"'25.11~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":101,"ch":"영총","tm":"소매강화팀","co":"","nm":"신동 3.0 추진","mg":"류병재/홍송표","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":102,"ch":"영총","tm":"도매강화팀","co":"●","nm":"도매네비게이터 운영","mg":"임태영","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.5,"plan":"","pg":""},{"no":103,"ch":"영총","tm":"도매강화팀","co":"●","nm":"인프라 포트폴리오 조정","mg":"최민우","sc":"'26.01~'26.12","st":"진행중","cp":"완료","pp":0.08,"plan":"","pg":""},{"no":104,"ch":"영총","tm":"도매강화팀","co":"","nm":"윈윈 운영 방식 고도화","mg":"최진필/고덕녕","sc":"'25.11~'26.06","st":"진행중","cp":"완료","pp":1,"plan":"","pg":""},{"no":105,"ch":"영총","tm":"도매강화팀","co":"","nm":"유심 판매","mg":"최진필","sc":"'26.01~'26.12","st":"진행중","cp":"완료","pp":0.08,"plan":"","pg":""},{"no":106,"ch":"영총","tm":"도매강화팀","co":"","nm":"엣지 P/G","mg":"서윤호","sc":"'26.01~'26.12","st":"진행중","cp":"완료","pp":0.08,"plan":"","pg":""},{"no":107,"ch":"영총","tm":"도매강화팀","co":"","nm":"대리점 위탁 개통 사업","mg":"김다희/이대현","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":108,"ch":"영총","tm":"도매강화팀","co":"","nm":"비용 Down","mg":"임태영","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":109,"ch":"영총","tm":"법인영업팀","co":"●","nm":"공백상권 영업활성화","mg":"조경용","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":110,"ch":"영총","tm":"법인영업팀","co":"●","nm":"섹터 영업 판매 확대","mg":"상권팀장/제안수행센터","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":111,"ch":"영총","tm":"법인영업팀","co":"","nm":"솔루션 제휴 영업 확대","mg":"상권팀장","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.1,"plan":"","pg":""},{"no":112,"ch":"영총","tm":"법인영업팀","co":"","nm":"영업대표 상품/정책 안내 고도화","mg":"전선희/서화정","sc":"'26.01~'26.12","st":"진행중","cp":"미완료","pp":0.3,"plan":"","pg":""},{"no":113,"ch":"영총","tm":"기업영업팀","co":"●","nm":"대형사업 수주율 확대","mg":"이경근","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.08,"plan":"","pg":""},{"no":114,"ch":"영총","tm":"기업영업팀","co":"●","nm":"IoT 원격관제 솔루션 사업 확장","mg":"이철욱/이형기","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.15,"plan":"","pg":""},{"no":115,"ch":"영총","tm":"기업영업팀","co":"","nm":"AI기반 영업기회 관리 자동화","mg":"변지애/신아시","sc":"'25.12~'26.01","st":"진행중","cp":"미완료","pp":0.15,"plan":"","pg":""},{"no":116,"ch":"영총","tm":"기업영업팀","co":"","nm":"직접영업 강화 유무선 Capa 확대","mg":"이경근","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.08,"plan":"","pg":""},{"no":117,"ch":"영총","tm":"기업영업팀","co":"","nm":"IoT 채널간 협력 시너지","mg":"이철욱","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0.08,"plan":"","pg":""},{"no":118,"ch":"영총","tm":"소상공인혁신팀","co":"●","nm":"프랜차이즈 영업 전문화/고도화","mg":"이경진/정윤석/전재현","sc":"'25.11~'26.12","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":119,"ch":"영총","tm":"소상공인혁신팀","co":"●","nm":"소상공인 온라인 플랫폼 추진","mg":"김영기/이한나","sc":"'25.12~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":120,"ch":"영총","tm":"소상공인혁신팀","co":"","nm":"GPTs 활용 프랜차이즈 조력자","mg":"전재현","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""},{"no":121,"ch":"영총","tm":"소상공인혁신팀","co":"","nm":"누적 B/P 기반 영업 가이드","mg":"김영기/민영홍","sc":"'25.12~'26.12","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":122,"ch":"영총","tm":"소상공인혁신팀","co":"","nm":"채널 손익개선 수익구조 전환","mg":"이경진/양영빈/민영홍/고새봄","sc":"'25.11~'26.12","st":"진행중","cp":"미완료","pp":0,"plan":"","pg":""},{"no":123,"ch":"영총","tm":"소상공인혁신팀","co":"","nm":"전채널 소상공인/법인 세일즈 DNA","mg":"민영홍/이한나","sc":"'26.01~'26.12","st":"계획","cp":"미완료","pp":0,"plan":"","pg":""}],
+profit: {
+  revenue:{total:77664176704,retail:22953776448,wholesale:11088704662,digital:34659578597,enterprise:1436658674,iot:299991118,corporate_sales:4759402223,small_biz:1118044701},
+  gross:{total:21162905628,retail:10277109308,wholesale:3674254557,digital:4214550894,enterprise:205522425,iot:370800713,corporate_sales:1143997616,small_biz:986845969},
+  sga:{total:17380259391,retail:8437055498,wholesale:2622987194,digital:3201735845,enterprise:108107991,iot:329010598,corporate_sales:1101732807,small_biz:758632198},
+  op:{total:3782646237,retail:1540134488,wholesale:843785242,digital:983654047,enterprise:91232302,iot:36541135,corporate_sales:30367120,small_biz:216549370},
+  net_income:3668676245
+},
+
+sga_detail: {
+  '인건비합계':{total:8297020530,retail:5429341252,wholesale:1762101809,digital:527145743,enterprise:73844679,iot:70022443,corporate_sales:342999833,small_biz:348871673},
+  '판매촉진비':{total:2448667223,retail:1064101999,wholesale:8200886,digital:1890905111,enterprise:306639,iot:7044498,corporate_sales:65382820,small_biz:35530982},
+  '복리후생비':{total:1832197606,retail:923962357,wholesale:332526351,digital:118702288,enterprise:9849340,iot:12899086,corporate_sales:39989273,small_biz:210676620},
+  '임차료':{total:1009755785,retail:401871559,wholesale:270868154,digital:53696862,enterprise:5077481,iot:5077768,corporate_sales:24373310,small_biz:23648226},
+  '판매수수료':{total:839417381,retail:0,wholesale:-4342557,digital:23329607,enterprise:12333546,iot:215622644,corporate_sales:588131584,small_biz:94203635},
+  '지급수수료':{total:1047352224,retail:102715810,wholesale:14501307,digital:332901720,enterprise:804843,iot:804843,corporate_sales:6054041,small_biz:14870529},
+  '운반비':{total:683044781,retail:104222300,wholesale:73614907,digital:140570578,enterprise:1601318,iot:1601318,corporate_sales:11290608,small_biz:176696}
+},
+
+hq: [
+  {nm:'강북본부',rev:5010013173,gp:2604156915,sga:2200332330},
+  {nm:'강남본부',rev:4634908575,gp:2388321957,sga:2010040698},
+  {nm:'강서본부',rev:5970843377,gp:3066971172,sga:2159796997},
+  {nm:'동부본부',rev:6778217809,gp:3876749304,sga:2934837510},
+  {nm:'서부본부',rev:5634724277,gp:3283848813,sga:2357279481}
+],
+
+kpi: [
+  {hq:"강서본부",ts:83.29,rk:1,rt:{t:78.58,s:62.88,p:15.71},wh:{t:96.49,s:91.22,p:5.27},sm:{t:71.95,s:52.45,p:19.5}},
+  {hq:"동부본부",ts:82.3,rk:2,rt:{t:79.25,s:63.8,p:15.45},wh:{t:96.11,s:90.11,p:6},sm:{t:59.23,s:40.55,p:18.68}},
+  {hq:"서부본부",ts:80.28,rk:3,rt:{t:78.52,s:63.17,p:15.35},wh:{t:88.35,s:82.35,p:6},sm:{t:66.63,s:45.85,p:20.78}},
+  {hq:"강북본부",ts:80.02,rk:4,rt:{t:77.46,s:61.89,p:15.58},wh:{t:91.94,s:86.54,p:5.39},sm:{t:59.64,s:40.23,p:19.41}},
+  {hq:"강남본부",ts:79.83,rk:5,rt:{t:77.75,s:62.38,p:15.36},wh:{t:94.27,s:89.27,p:5},sm:{t:49.01,s:29.58,p:19.43}}
+],
+
+kpi_smb_detail: {
+  '강서본부':{total:71.95,sales:52.45,profit:19.5,franchise_cnt:48,coverage:78,avg_revenue:8.2},
+  '동부본부':{total:59.23,sales:40.55,profit:18.68,franchise_cnt:52,coverage:65,avg_revenue:6.8},
+  '서부본부':{total:66.63,sales:45.85,profit:20.78,franchise_cnt:41,coverage:71,avg_revenue:7.5},
+  '강북본부':{total:59.64,sales:40.23,profit:19.41,franchise_cnt:44,coverage:63,avg_revenue:6.9},
+  '강남본부':{total:49.01,sales:29.58,profit:19.43,franchise_cnt:38,coverage:52,avg_revenue:5.4}
+},
+
+// ─── 본부별 액션플랜 컨텍스트 ─────────────────────────────────────────
+hq_context: {
+  '강서본부':{str:'도매 전국 1위권, 소상공인 1위',wk:'소매 소상공인 R-VOC 관리 취약',opp:'소상공인 커버리지 78%→90% 확대'},
+  '동부본부':{str:'소매 MNP 최강(9.2점), 도매 1위권',wk:'소상공인 최하위 수준(59.23)',opp:'동부 소상공인 프랜차이즈 확대'},
+  '서부본부':{str:'소매 유선 강점(13.2점), 소상공인 이익 최고(20.78)',wk:'도매 전 항목 최하위(88.35)',opp:'도매 대리점 확충·엣지 집중'},
+  '강북본부':{str:'소매 이익 안정적(15.58)',wk:'소매 MNP 부진(7.2점), 소상공인 하위',opp:'MNP 특화 캠페인·대리점 에코'},
+  '강남본부':{str:'도매 이익 최고(6.0점)',wk:'소상공인 최하위(49.01), 소매 MNP 최저',opp:'소상공인 온라인 플랫폼 활용'}
+},
+
+kpi_retail_detail: {
+  '강북본부':{total:77.46,rank:5,hubul:14.30,mnp:6.49,wired:13.95,mit:8.85,strategy:6.08,rvoc:1.33,tcsi:3.04,apru:5.0,store_profit:9.58,op_profit:6.0},
+  '강남본부':{total:77.75,rank:4,hubul:13.66,mnp:5.44,wired:14.47,mit:8.30,strategy:5.65,rvoc:3.73,tcsi:3.28,apru:5.0,store_profit:9.36,op_profit:6.0},
+  '강서본부':{total:78.58,rank:2,hubul:13.49,mnp:5.83,wired:13.74,mit:8.44,strategy:5.91,rvoc:0.86,tcsi:6.0,apru:5.0,store_profit:9.71,op_profit:6.0},
+  '동부본부':{total:79.25,rank:1,hubul:13.54,mnp:8.14,wired:11.51,mit:8.52,strategy:5.79,rvoc:4.19,tcsi:4.41,apru:5.0,store_profit:9.45,op_profit:6.0},
+  '서부본부':{total:78.52,rank:3,hubul:15.03,mnp:6.90,wired:13.57,mit:8.56,strategy:5.77,rvoc:1.39,tcsi:4.25,apru:5.0,store_profit:9.35,op_profit:6.0}
+},
+
+kpi_wholesale_detail: {
+  '강북본부':{total:91.94,rank:4,hubul:24.0,mnp:12.0,wired:16.51,mit:12.0,rvoc:3.18,apru:5.0,infra:5.44,op_profit:5.39},
+  '강남본부':{total:94.27,rank:3,hubul:24.0,mnp:12.0,wired:18.43,mit:12.0,rvoc:3.25,apru:5.0,infra:5.75,op_profit:5.0},
+  '강서본부':{total:96.49,rank:1,hubul:24.0,mnp:12.0,wired:20.55,mit:12.0,rvoc:3.25,apru:5.0,infra:5.39,op_profit:5.27},
+  '동부본부':{total:96.11,rank:2,hubul:24.0,mnp:12.0,wired:18.12,mit:12.0,rvoc:5.0,apru:5.0,infra:5.26,op_profit:6.0},
+  '서부본부':{total:88.35,rank:5,hubul:22.94,mnp:9.74,wired:14.85,mit:11.32,rvoc:5.0,apru:5.0,infra:5.26,op_profit:6.0}
+},
+
+// ─── 본부×채널 교차 손익 (KPI비율 추정, 단위: 원) ────────────────────────
+hq_channel: {
+  '강서본부':{
+    rev:{retail:4606465812,wholesale:2290326896,digital:7383391384,enterprise:306045650,iot:63905908,corporate_sales:1013876417,small_biz:262492058},
+    gp:{retail:2062455944,wholesale:758902351,digital:897808918,small_biz:231689511},
+    op:{retail:309081030,wholesale:174280414,digital:209543887,small_biz:50840981}
+  },
+  '동부본부':{
+    rev:{retail:4645742117,wholesale:2281307058,digital:8381769845,enterprise:347428989,iot:72547232,corporate_sales:1150972275,small_biz:216086235},
+    gp:{retail:2080041150,wholesale:755913617,digital:1019210187,small_biz:190729253},
+    op:{retail:311716361,wholesale:173594057,digital:237878306,small_biz:41852833}
+  },
+  '서부본부':{
+    rev:{retail:4602948531,wholesale:2097112460,digital:6967755148,enterprise:288817299,iot:60308427,corporate_sales:956801862,small_biz:243083334},
+    gp:{retail:2060881149,wholesale:694880534,digital:847268198,small_biz:214558334},
+    op:{retail:308845030,wholesale:159577931,digital:197747948,small_biz:47081787}
+  },
+  '강북본부':{
+    rev:{retail:4540809898,wholesale:2182326198,digital:6195253460,enterprise:256796677,iot:53622147,corporate_sales:850723070,small_biz:217582020},
+    gp:{retail:2033059779,wholesale:723116200,digital:753333193,small_biz:192049512},
+    op:{retail:304675701,wholesale:166062195,digital:175824011,small_biz:42142545}
+  },
+  '강남본부':{
+    rev:{retail:4557810090,wholesale:2237632050,digital:5731408760,enterprise:237570058,iot:49607404,corporate_sales:787028599,small_biz:178801053},
+    gp:{retail:2040671286,wholesale:741441855,digital:696930398,small_biz:157819360},
+    op:{retail:305816366,wholesale:170270646,digital:162659895,small_biz:34631223}
+  }
+},
+
+kpiBranch: {
+  retail:[{nm:"남부소매",sc:84.71,rk:1},{nm:"호남소매",sc:82.45,rk:2},{nm:"인천소매",sc:81.33,rk:3},{nm:"부산소매",sc:81.11,rk:4},{nm:"강동소매",sc:77.91,rk:5},{nm:"강북소매",sc:76.85,rk:6},{nm:"대구소매",sc:76.24,rk:7},{nm:"강서소매",sc:76.17,rk:8},{nm:"충청소매",sc:75.27,rk:9},{nm:"강남소매",sc:70.66,rk:10}],
+  wholesale:[{nm:"대구도매",sc:102.82,rk:1},{nm:"강서도매",sc:96.49,rk:2},{nm:"강남도매",sc:94.27,rk:3},{nm:"강북도매",sc:91.94,rk:4},{nm:"부산도매",sc:91.2,rk:5},{nm:"충청도매",sc:88.32,rk:6},{nm:"호남도매",sc:87.85,rk:7}]
+},
+
+variance:{total:3.46,retail:1.79,wholesale:8.14,smb:22.95,retail_sales:1.92,retail_profit:0.36,wh_sales:8.87,wh_profit:1.0,smb_sales:22.88,smb_profit:2.1},
+period:'2026년 1월'
+};
+
+// ==================== UTILS ====================
+const CN={retail:'소매',wholesale:'도매',digital:'디지털',enterprise:'기업/공공',iot:'IoT',corporate_sales:'법인영업',small_biz:'소상공인'};
+const CC={retail:'#38bdf8',wholesale:'#34d399',digital:'#a78bfa',enterprise:'#fb923c',iot:'#fbbf24',corporate_sales:'#f87171',small_biz:'#818cf8'};
+const CHS=['retail','wholesale','digital','enterprise','iot','corporate_sales','small_biz'];
+const RC=['','#fbbf24','#94a3b8','#d97706','#38bdf8','#a78bfa'];
+const fB=n=>(n/1e8).toFixed(1);
+const fM=n=>Math.round(n/1e6).toLocaleString();
+const fMr=n=>(n/1e6).toFixed(0);
+const pct=n=>Math.round(n*100)+'%';
+const pc=p=>p>=.8?'var(--g)':p>=.5?'var(--acc)':p>=.2?'var(--y)':'var(--r)';
+const hmc=(v,arr)=>{const s=[...arr].sort((a,b)=>b-a),i=s.indexOf(v);return i<=1?'hm-h':i>=arr.length-2?'hm-l':'hm-m';};
+const comma=n=>Math.round(n).toLocaleString();
+
+// ==================== TAB ====================
+let currentTab='tasks';
+function switchTab(btn){
+  const t=btn.dataset.t;currentTab=t;
+  document.querySelectorAll('.bni').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pnl').forEach(x=>x.classList.remove('on'));
+  btn.classList.add('on');document.getElementById('t-'+t).classList.add('on');
+  const fab=document.querySelector('.fab');
+  fab.style.display=['tasks','profit','kpi'].includes(t)?'flex':'none';
+}
+function toggleSec(hdr){hdr.classList.toggle('closed');hdr.nextElementSibling.classList.toggle('hidden');}
+
+// ==================== TASKS ====================
+let F={ch:'all',st:'all',tm:'all',cr:'all',q:''};
+function initTaskUI(){
+  const tms=[...new Set(D.tasks.map(t=>t.tm))].sort();
+  document.getElementById('tmFilter').innerHTML='<option value="all">전체 팀</option>'+tms.map(t=>`<option value="${t}">${t}</option>`).join('');
+  document.getElementById('chFilter').innerHTML=['all','경총','영총'].map(v=>`<button class="chip ${v==='all'?'on':''}" onclick="setF('ch','${v}',this)">${v==='all'?'전체':v}</button>`).join('');
+  document.getElementById('stFilter').innerHTML=['all','진행중','계획','완료'].map(v=>`<button class="chip ${v==='all'?'on':''}" onclick="setF('st','${v}',this)">${v==='all'?'전체상태':v}</button>`).join('');
+  const total=D.tasks.length,done=D.tasks.filter(t=>t.st==='완료').length,prog=D.tasks.filter(t=>t.st==='진행중').length,core=D.tasks.filter(t=>t.co==='●').length;
+  document.getElementById('taskStats').innerHTML=`
+    <div class="sc bl"><div class="sl">전체 과제</div><div class="sv">${total}</div><div class="ss">${tms.length}개 팀</div></div>
+    <div class="sc gr"><div class="sl">완료</div><div class="sv" style="color:var(--g)">${done}</div><div class="ss">${(done/total*100).toFixed(1)}%</div></div>
+    <div class="sc yl"><div class="sl">진행중</div><div class="sv" style="color:var(--y)">${prog}</div><div class="ss">${(prog/total*100).toFixed(1)}%</div></div>
+    <div class="sc rd"><div class="sl">핵심과제</div><div class="sv" style="color:var(--r)">${core}</div><div class="ss">${(core/total*100).toFixed(1)}%</div></div>`;
+  renderTasks();
+}
+function setF(k,v,el){F[k]=v;el.parentElement.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderTasks();}
+document.getElementById('tmFilter').onchange=e=>{F.tm=e.target.value;renderTasks();};
+document.getElementById('crFilter').onchange=e=>{F.cr=e.target.value;renderTasks();};
+document.getElementById('tSrch').oninput=e=>{F.q=e.target.value;renderTasks();};
+function renderTasks(){
+  const fl=D.tasks.filter(t=>{
+    if(F.ch!=='all'&&t.ch!==F.ch)return false;if(F.st!=='all'&&t.st!==F.st)return false;
+    if(F.tm!=='all'&&t.tm!==F.tm)return false;if(F.cr==='core'&&t.co!=='●')return false;
+    if(F.q){const s=F.q.toLowerCase();if(!t.nm.toLowerCase().includes(s)&&!t.tm.toLowerCase().includes(s)&&!(t.mg||'').toLowerCase().includes(s))return false;}
+    return true;
+  });
+  document.getElementById('tCnt').textContent=`${fl.length}개 과제`;
+  document.getElementById('tBody').innerHTML=fl.map(t=>`
+    <div class="task-card ${t.st}" onclick="showTask(${t.no})">
+      <div class="tc-top">
+        <div class="tc-title">${t.co?'<span style="color:var(--r)">● </span>':''}${t.nm}</div>
+        <div class="tc-badges"><span class="pill ${t.st}">${t.st}</span></div>
+      </div>
+      <div class="tc-meta">
+        <span class="tc-ch ${t.ch}">${t.ch}</span>
+        <span class="tc-team">${t.tm}</span>
+        <span class="tc-mgr">${t.mg||''}</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" style="width:${t.pp*100}%;background:${pc(t.pp)}"></div></div>
+        <div class="progress-pct" style="color:${pc(t.pp)}">${pct(t.pp)}</div>
+      </div>
+    </div>`).join('');
+}
+function showTask(no){
+  const t=D.tasks.find(x=>x.no===no);if(!t)return;
+  document.getElementById('modalC').innerHTML=`
+    <div class="mh"><div class="mt_">${t.co?'<span style="color:var(--r)">● </span>':''}${t.nm}</div>
+      <button class="mx" onclick="document.getElementById('modal').classList.remove('show')">✕</button></div>
+    <div class="mm">
+      <div class="mmi"><span class="mml">총괄</span><span class="mmv">${t.ch}</span></div>
+      <div class="mmi"><span class="mml">팀</span><span class="mmv">${t.tm}</span></div>
+      <div class="mmi"><span class="mml">담당자</span><span class="mmv">${t.mg||''}</span></div>
+      <div class="mmi"><span class="mml">일정</span><span class="mmv">${t.sc||''}</span></div>
+      <div class="mmi"><span class="mml">상태</span><span class="mmv"><span class="pill ${t.st}">${t.st}</span></span></div>
+      <div class="mmi"><span class="mml">추진도</span><span class="mmv" style="color:${pc(t.pp)}">${pct(t.pp)}</span></div>
+    </div>
+    <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:14px">
+      <div style="height:100%;width:${t.pp*100}%;background:${pc(t.pp)};border-radius:4px"></div></div>
+    ${t.plan?`<div class="ms"><div class="mst">세부실행계획</div><div class="msc">${t.plan}</div></div>`:''}
+    ${t.pg?`<div class="ms"><div class="mst">추진 내용</div><div class="msc">${t.pg}</div></div>`:''}`;
+  document.getElementById('modal').classList.add('show');
+}
+
+// ==================== PROFIT ====================
+function initProfitUI(){
+  const P=D.profit,SD=D.sga_detail;
+  document.getElementById('profStats').innerHTML=`
+    <div class="sc bl"><div class="sl">매출</div><div class="sv">${fB(P.revenue.total)}억</div><div class="ss">총이익률 ${(P.gross.total/P.revenue.total*100).toFixed(1)}%</div></div>
+    <div class="sc gr"><div class="sl">매출총이익</div><div class="sv" style="color:var(--g)">${fB(P.gross.total)}억</div></div>
+    <div class="sc yl"><div class="sl">판관비</div><div class="sv" style="color:var(--y)">${fB(P.sga.total)}억</div><div class="ss">${(P.sga.total/P.revenue.total*100).toFixed(1)}%</div></div>
+    <div class="sc og"><div class="sl">영업이익</div><div class="sv" style="color:var(--o)">${fB(P.op.total)}억</div><div class="ss">${(P.op.total/P.revenue.total*100).toFixed(1)}%</div></div>`;
+  const mx=Math.max(...CHS.map(c=>P.revenue[c]));
+  document.getElementById('revChart').innerHTML=CHS.map(c=>`<div class="br"><div class="bl_">${CN[c]}</div><div class="bt"><div class="bf" style="width:${(P.revenue[c]/mx*100).toFixed(1)}%;background:${CC[c]}">${fB(P.revenue[c])}억</div></div><div class="bv">${(P.revenue[c]/P.revenue.total*100).toFixed(1)}%</div></div>`).join('');
+  const mx2=Math.max(...CHS.map(c=>Math.abs(P.op[c])));
+  document.getElementById('opChart').innerHTML=CHS.map(c=>`<div class="br"><div class="bl_">${CN[c]}</div><div class="bt"><div class="bf" style="width:${(Math.abs(P.op[c])/mx2*100).toFixed(1)}%;background:${CC[c]}">${fB(P.op[c])}억</div></div><div class="bv">${(P.op[c]/P.op.total*100).toFixed(1)}%</div></div>`).join('');
+  const rows=[{l:'매출',d:P.revenue,b:1},{l:'총이익',d:P.gross,b:0},{l:'판관비',d:P.sga,b:0},{l:'영업이익',d:P.op,b:1}];
+  document.getElementById('fBody').innerHTML=rows.map(r=>`<tr class="${r.b?'tr':''}"><td style="font-weight:${r.b?700:500}">${r.l}</td><td>${fMr(r.d.total)}</td>${CHS.map(c=>`<td>${fMr(r.d[c])}</td>`).join('')}</tr>`).join('')+
+    `<tr><td>이익률</td><td style="font-weight:700">${(P.op.total/P.revenue.total*100).toFixed(1)}%</td>${CHS.map(c=>`<td class="${P.op[c]/P.revenue[c]>.05?'pos':'neg'}">${(P.op[c]/P.revenue[c]*100).toFixed(1)}%</td>`).join('')}</tr>`;
+  document.getElementById('hqBody').innerHTML=D.hq.map(h=>{const op=h.gp-h.sga;return `<tr><td style="font-weight:600">${h.nm}</td><td>${fMr(h.rev)}</td><td>${fMr(h.gp)}</td><td>${fMr(h.sga)}</td><td class="${op>0?'pos':'neg'}">${fMr(op)}</td><td class="${op/h.rev>.05?'pos':'neg'}">${(op/h.rev*100).toFixed(1)}%</td></tr>`;}).join('');
+  const sgaTop=[{l:'인건비',v:SD['인건비합계'].total,c:'#38bdf8'},{l:'판촉비',v:SD['판매촉진비'].total,c:'#f87171'},{l:'지급수수료',v:SD['지급수수료'].total,c:'#a78bfa'},{l:'임차료',v:SD['임차료'].total,c:'#34d399'},{l:'판매수수료',v:SD['판매수수료'].total,c:'#fb923c'},{l:'복리후생비',v:SD['복리후생비'].total,c:'#fbbf24'},{l:'운반비',v:SD['운반비'].total,c:'#818cf8'}].sort((a,b)=>b.v-a.v);
+  const sgaMx=sgaTop[0].v;
+  document.getElementById('sgaChart').innerHTML=sgaTop.map(x=>`<div class="br"><div class="bl_">${x.l}</div><div class="bt"><div class="bf" style="width:${(x.v/sgaMx*100).toFixed(0)}%;background:${x.c}">${fB(x.v)}억</div></div><div class="bv">${(x.v/P.sga.total*100).toFixed(1)}%</div></div>`).join('');
+  document.getElementById('costEffChart').innerHTML=CHS.map(c=>{
+    const rev=P.revenue[c],labor=SD['인건비합계'][c],promo=SD['판매촉진비'][c];
+    const lr=(labor/rev*100).toFixed(1),pr=(promo/rev*100).toFixed(1);
+    return `<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:3px">${CN[c]}</div>
+      <div class="br" style="margin-bottom:2px"><div class="bl_" style="width:56px;font-size:10px">인건비</div><div class="bt" style="height:16px"><div class="bf" style="width:${Math.min(100,lr*2)}%;background:#38bdf8;font-size:9px">${lr}%</div></div></div>
+      <div class="br" style="margin-bottom:0"><div class="bl_" style="width:56px;font-size:10px">판촉비</div><div class="bt" style="height:16px"><div class="bf" style="width:${Math.min(100,pr*2)}%;background:#f87171;font-size:9px">${pr}%</div></div></div></div>`;
+  }).join('');
+}
+
+// ==================== KPI ====================
+function initKpiUI(){
+  const K=D.kpi;
+  const hqs=['강북본부','강남본부','강서본부','동부본부','서부본부'];
+  document.getElementById('kpiCards').innerHTML=K.map(k=>{
+    const rd=D.kpi_retail_detail[k.hq]||{},wd=D.kpi_wholesale_detail[k.hq]||{};
+    return `<div class="kc kr${k.rk}"><div class="kc-top"><div class="kn">${k.hq}</div><div class="krb r${k.rk}">#${k.rk}</div></div>
+    <div class="ks" style="color:${RC[k.rk]}">${k.ts.toFixed(1)}</div>
+    <div class="kbd"><div class="km"><div class="kml">소매60%</div><div class="kmv" style="color:var(--acc)">${k.rt.t.toFixed(1)}</div></div><div class="km"><div class="kml">도매30%</div><div class="kmv" style="color:var(--g)">${k.wh.t.toFixed(1)}</div></div><div class="km"><div class="kml">소상공10%</div><div class="kmv" style="color:var(--p)">${k.sm.t.toFixed(1)}</div></div></div>
+    <div class="smg"><div class="smi"><div class="smi-l">후불</div><div class="smi-v">${rd.hubul?.toFixed(1)||'-'}</div></div><div class="smi"><div class="smi-l">MNP</div><div class="smi-v">${rd.mnp?.toFixed(1)||'-'}</div></div><div class="smi"><div class="smi-l">유선</div><div class="smi-v">${rd.wired?.toFixed(1)||'-'}</div></div><div class="smi"><div class="smi-l">R-VOC</div><div class="smi-v">${rd.rvoc?.toFixed(1)||'-'}</div></div><div class="smi"><div class="smi-l">도매유선</div><div class="smi-v">${wd.wired?.toFixed(1)||'-'}</div></div><div class="smi"><div class="smi-l">인프라</div><div class="smi-v">${wd.infra?.toFixed(1)||'-'}</div></div></div></div>`;
+  }).join('');
+  document.getElementById('rtBody').innerHTML=hqs.map(h=>{const d=D.kpi_retail_detail[h]||{};return `<tr><td style="font-weight:600">${h.replace('본부','')}</td><td style="font-weight:700">${d.total?.toFixed(1)}</td><td style="color:${d.hubul>14?'var(--g)':'var(--t2)'}">${d.hubul?.toFixed(1)}</td><td style="color:${d.mnp>7?'var(--g)':'var(--r)'}">${d.mnp?.toFixed(1)}</td><td>${d.wired?.toFixed(1)}</td><td>${d.mit?.toFixed(1)}</td><td style="color:${d.rvoc>3?'var(--g)':'var(--r)'}">${d.rvoc?.toFixed(2)}</td><td style="color:${d.tcsi>4?'var(--g)':'var(--r)'}">${d.tcsi?.toFixed(1)}</td><td>${d.store_profit?.toFixed(1)}</td></tr>`;}).join('');
+  document.getElementById('whBody').innerHTML=hqs.map(h=>{const d=D.kpi_wholesale_detail[h]||{};return `<tr><td style="font-weight:600">${h.replace('본부','')}</td><td style="font-weight:700">${d.total?.toFixed(1)}</td><td>${d.hubul?.toFixed(1)}</td><td style="color:${d.mnp>=12?'var(--g)':'var(--r)'}">${d.mnp?.toFixed(1)}</td><td style="color:${d.wired>18?'var(--g)':d.wired<16?'var(--r)':'var(--t2)'}">${d.wired?.toFixed(1)}</td><td>${d.rvoc?.toFixed(1)}</td><td>${d.infra?.toFixed(1)}</td><td>${d.op_profit?.toFixed(1)}</td></tr>`;}).join('');
+  const rtV=hqs.map(h=>D.kpi_retail_detail[h]?.total||0),whV=hqs.map(h=>D.kpi_wholesale_detail[h]?.total||0);
+  document.getElementById('hmBody').innerHTML=K.map(k=>{const chs={소매:k.rt.t,도매:k.wh.t,소상공인:k.sm.t};const weak=Object.entries(chs).sort((a,b)=>a[1]-b[1])[0][0];return `<tr><td style="font-weight:600">${k.hq.replace('본부','')}</td><td style="font-weight:700;color:${RC[k.rk]}">${k.ts.toFixed(1)}</td><td><span class="hm ${hmc(k.rt.t,rtV)}">${k.rt.t.toFixed(1)}</span></td><td><span class="hm ${hmc(k.wh.t,whV)}">${k.wh.t.toFixed(1)}</span></td><td><span class="hm ${hmc(k.sm.t,[71.95,59.23,66.63,59.64,49.01])}">${k.sm.t.toFixed(1)}</span></td><td style="color:var(--r);font-size:11px">${weak}</td></tr>`;}).join('');
+  document.getElementById('kRank').innerHTML=K.map(k=>`<div class="br"><div class="bl_">${k.hq.replace('본부','')}</div><div class="bt"><div class="bf" style="width:${k.ts}%;background:${RC[k.rk]}">${k.ts.toFixed(1)}</div></div><div class="bv" style="color:${RC[k.rk]};font-weight:700">#${k.rk}</div></div>`).join('');
+  const V=D.variance;
+  const vars=[{l:'소상공인영업',v:V.smb_sales},{l:'소상공인종합',v:V.smb},{l:'도매영업',v:V.wh_sales},{l:'도매종합',v:V.wholesale},{l:'종합KPI',v:V.total},{l:'소매영업',v:V.retail_sales},{l:'소매종합',v:V.retail},{l:'도매이익',v:V.wh_profit},{l:'소매이익',v:V.retail_profit}];
+  const vmx=Math.max(...vars.map(x=>x.v));
+  document.getElementById('kVar').innerHTML=vars.map(x=>`<div class="br"><div class="bl_">${x.l}</div><div class="bt"><div class="bf" style="width:${(x.v/vmx*100).toFixed(1)}%;background:${x.v>10?'var(--r)':x.v>5?'var(--o)':x.v>2?'var(--y)':'var(--g)'}">${x.v.toFixed(1)}p</div></div><div class="bv">${x.v>10?'⚠️':x.v>5?'⚡':'✅'}</div></div>`).join('');
+}
+
+// ==================== REPORT SHEET ====================
+const rptConfigs = {
+  tasks:{title:'📋 과제 관리 보고서',btns:[
+    {label:'📄 전사 과제 종합 보고서',cls:'green',fn:()=>genTaskReport()},
+    {label:'🏢 총괄별 심층 분석',cls:'blue',fn:()=>genTaskHqReport()},
+    {label:'📊 채널별 연계 분석',cls:'teal',fn:()=>genTaskChannelReport()},
+  ]},
+  profit:{title:'📊 이익 분석 보고서',btns:[
+    {label:'⭐ Executive 종합 보고서',cls:'green',fn:()=>genProfitExecutive()},
+    {label:'💰 채널×비용 구조 심층분석',cls:'teal',fn:()=>genChannelCostReport()},
+    {label:'🏢 본부별 수익성 분석',cls:'blue',fn:()=>genProfitReport('hq')},
+    {label:'📊 채널별 손익 분석',cls:'purple',fn:()=>genProfitReport('channel')},
+  ]},
+  kpi:{title:'🎯 KPI 분석 보고서',btns:[
+    {label:'📈 KPI 편차 원인 분석',cls:'green',fn:()=>genKpiVarianceReport()},
+    {label:'🏢 본부별 액션플랜',cls:'teal',fn:()=>genKpiActionPlanReport()},
+    {label:'📄 KPI 종합 보고서',cls:'blue',fn:()=>genKpiReport('summary')},
+    {label:'📊 세부지표 심층분석',cls:'purple',fn:()=>genKpiReport('detail')},
+    {label:'🏬 지사별 분석',cls:'orange',fn:()=>genKpiReport('branch')},
+  ]},
+  ai:{title:'🤖 AI 분석 보고서',btns:[
+    {label:'📋 경영현황 Executive 보고서',cls:'green',fn:()=>genAISummaryReport()},
+    {label:'⭐ 전사 손익 Executive 보고서',cls:'blue',fn:()=>genProfitExecutive()},
+    {label:'📈 KPI 편차 원인 분석',cls:'teal',fn:()=>genKpiVarianceReport()},
+    {label:'🏢 본부별 KPI 액션플랜',cls:'purple',fn:()=>genKpiActionPlanReport()},
+  ]}
+};
+function showRptSheet(){
+  const cfg=rptConfigs[currentTab]||rptConfigs.tasks;
+  document.getElementById('rptSheetTitle').textContent=cfg.title;
+  document.getElementById('rptBtnList').innerHTML=cfg.btns.map((b,i)=>`<button class="rpt-btn ${b.cls}" onclick="rptBtnClick(${i})">${b.label}</button>`).join('');
+  window._rptBtns=cfg.btns;
+  document.getElementById('rptSheet').classList.add('show');
+}
+function rptBtnClick(i){window._rptBtns[i].fn();hideRptSheet();}
+function hideRptSheet(){document.getElementById('rptSheet').classList.remove('show');}
+
+// ==================== REPORT RENDER ====================
+function openReport(html,title){
+  title=title||'보고서';
+  const viewer=document.getElementById('rptViewer');
+  const body=document.getElementById('rptViewerBody');
+  document.getElementById('rptViewerTitle').textContent=title;
+  body.innerHTML='';
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='width:100%;height:100%;border:none;';
+  body.appendChild(iframe);
+  const doc=iframe.contentDocument||iframe.contentWindow.document;
+  doc.open();doc.write(html);doc.close();
+  viewer.classList.add('show');
+  document.body.style.overflow='hidden';
+  window._currentReportHtml=html;
+}
+function closeReportViewer(){document.getElementById('rptViewer').classList.remove('show');document.body.style.overflow='';}
+function printReport(){const iframe=document.querySelector('#rptViewerBody iframe');if(iframe)iframe.contentWindow.print();}
+
+// ==================== EXECUTIVE REPORT STYLE ====================
+function rptStyle(){
+  return `<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:#fff;color:#0f172a;padding:0;font-size:12px;line-height:1.65}
+  .page{max-width:860px;margin:0 auto;padding:32px 28px 48px}
+  .cover{background:linear-gradient(135deg,#0369a1 0%,#0c4a6e 50%,#082f49 100%);color:#fff;padding:40px 28px 32px;margin-bottom:0}
+  .cover-tag{display:inline-block;padding:4px 12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px}
+  .cover-title{font-size:24px;font-weight:900;letter-spacing:-.5px;margin-bottom:8px;line-height:1.2}
+  .cover-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:24px}
+  .cover-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;border-top:1px solid rgba(255,255,255,.2);padding-top:20px}
+  .cover-kpi{text-align:center}
+  .cover-kpi-v{font-size:28px;font-weight:900;letter-spacing:-1px}
+  .cover-kpi-l{font-size:10px;color:rgba(255,255,255,.6);font-weight:500;margin-top:2px}
+  
+  h1{font-size:18px;font-weight:800;color:#0369a1;border-bottom:2px solid #0369a1;padding-bottom:8px;margin:28px 0 14px;letter-spacing:-.3px}
+  h1:first-of-type{margin-top:0}
+  h2{font-size:14px;font-weight:700;color:#0f172a;margin:20px 0 10px;padding-left:10px;border-left:3px solid #0369a1}
+  h3{font-size:12px;font-weight:700;color:#334155;margin:14px 0 7px;padding-left:8px;border-left:2px solid #e2e8f0}
+  
+  .exec-box{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:10px;padding:16px 18px;margin:12px 0;position:relative}
+  .exec-box::before{content:'EXECUTIVE SUMMARY';position:absolute;top:-9px;left:14px;background:#0369a1;color:#fff;font-size:8px;font-weight:700;letter-spacing:1.5px;padding:2px 8px;border-radius:4px}
+  .insight{background:#eff6ff;border-left:4px solid #3b82f6;padding:11px 14px;margin:10px 0;border-radius:0 8px 8px 0;font-size:11.5px}
+  .warn{background:#fef2f2;border-left:4px solid #dc2626;padding:11px 14px;margin:10px 0;border-radius:0 8px 8px 0;font-size:11.5px}
+  .action{background:#f0fdf4;border-left:4px solid #16a34a;padding:11px 14px;margin:10px 0;border-radius:0 8px 8px 0;font-size:11.5px}
+  .caution{background:#fffbeb;border-left:4px solid #d97706;padding:11px 14px;margin:10px 0;border-radius:0 8px 8px 0;font-size:11.5px}
+  
+  table{width:100%;border-collapse:collapse;margin:10px 0 18px;font-size:11.5px}
+  thead tr{background:#0369a1;color:#fff}
+  th{padding:9px 10px;text-align:center;font-weight:700;font-size:10.5px;letter-spacing:.3px;white-space:nowrap}
+  th:first-child{text-align:left}
+  td{padding:8px 10px;text-align:right;border-bottom:1px solid #f1f5f9;font-family:'JetBrains Mono',monospace,sans-serif;font-size:11px}
+  td:first-child{text-align:left;font-family:'Noto Sans KR',sans-serif;font-weight:600;font-size:11.5px}
+  tr:nth-child(even){background:#f8fafc}
+  tr:hover{background:#f0f9ff}
+  tr.total{background:#dbeafe;font-weight:700}
+  tr.total td{font-size:12px}
+  .pos{color:#059669;font-weight:600}.neg{color:#dc2626;font-weight:600}
+  .hi{color:#0369a1;font-weight:700}.lo{color:#dc2626}
+  
+  .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 16px}
+  .kpi-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;border-top:3px solid #0369a1}
+  .kpi-card.warn-card{border-top-color:#dc2626}
+  .kpi-card.ok-card{border-top-color:#059669}
+  .kpi-v{font-size:22px;font-weight:900;color:#0369a1;letter-spacing:-1px;font-family:monospace}
+  .kpi-v.warn{color:#dc2626}.kpi-v.ok{color:#059669}
+  .kpi-l{font-size:10px;color:#64748b;font-weight:500;margin-top:2px}
+  
+  .bar-row{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .bar-label{width:80px;font-size:11px;font-weight:600;text-align:right;flex-shrink:0;color:#475569}
+  .bar-bg{flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:700;color:#fff}
+  .bar-val{width:80px;font-size:11px;font-family:monospace;text-align:left;padding-left:6px;flex-shrink:0;color:#475569}
+  
+  .ch-cost-block{margin-bottom:18px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden}
+  .ch-cost-header{padding:10px 14px;font-weight:700;font-size:12px;color:#fff;display:flex;justify-content:space-between;align-items:center}
+  .ch-cost-body{padding:10px 14px}
+  .ch-cost-sub{font-size:10px;opacity:.8;font-weight:400}
+  
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700}
+  .badge-r{background:#dcfce7;color:#16a34a}.badge-y{background:#fef9c3;color:#ca8a04}.badge-o{background:#ffedd5;color:#c2410c}.badge-red{background:#fee2e2;color:#dc2626}
+  
+  .priority-table th{font-size:9.5px}.priority-table td{font-size:10.5px}
+  .section-divider{border:none;border-top:1px dashed #cbd5e1;margin:20px 0}
+  .footnote{font-size:10px;color:#94a3b8;margin-top:6px;font-style:italic}
+  @media print{.page{padding:20px}h1{font-size:15px}.cover{padding:24px 20px 20px}}
+  </style>`;
+}
+
+// ==================== ① EXECUTIVE 종합 보고서 ====================
+function genProfitExecutive(){
+  const P=D.profit,SD=D.sga_detail,H=D.hq;
+  const opm=(P.op.total/P.revenue.total*100);
+  const bestCh=CHS.reduce((a,b)=>P.op[a]/P.revenue[a]>P.op[b]/P.revenue[b]?a:b);
+  const worstCh=CHS.reduce((a,b)=>P.op[a]/P.revenue[a]<P.op[b]/P.revenue[b]?a:b);
+  const sortedHq=[...H].sort((a,b)=>(b.gp-b.sga)/b.rev-(a.gp-a.sga)/a.rev);
+  const bestHq=sortedHq[0],worstHq=sortedHq[sortedHq.length-1];
+  const laborRatio=(SD['인건비합계'].total/P.sga.total*100);
+  const promoRatio=(SD['판매촉진비'].total/P.sga.total*100);
+
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>KT M&S Executive 보고서</title>${rptStyle()}</head><body>
+  <div class="cover">
+    <div class="cover-tag">Confidential · For Executive Review Only</div>
+    <div class="cover-title">KT M&S 손익 Executive 보고서</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 채널별·본부별·비용구조 종합 분석</div>
+    <div class="cover-meta">
+      <div class="cover-kpi"><div class="cover-kpi-v">${fB(P.revenue.total)}억</div><div class="cover-kpi-l">전사 매출</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v">${fB(P.op.total)}억</div><div class="cover-kpi-l">영업이익 (${opm.toFixed(1)}%)</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v">${fB(P.net_income)}억</div><div class="cover-kpi-l">당기순이익</div></div>
+    </div>
+  </div>
+  <div class="page">
+
+  <h1>Ⅰ. Executive Summary</h1>
+  <div class="exec-box">
+    <strong>핵심 성과:</strong> ${D.period} 매출 <strong>${fB(P.revenue.total)}억</strong>원, 영업이익 <strong>${fB(P.op.total)}억</strong>원(영업이익률 ${opm.toFixed(1)}%)으로 사업을 마감하였습니다.<br><br>
+    <strong>수익성 분포:</strong> 소상공인 채널(영업이익률 ${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%)이 최고 수익채널이나 매출비중 ${(P.revenue.small_biz/P.revenue.total*100).toFixed(1)}%로 기여도가 낮으며, 디지털 채널(비중 ${(P.revenue.digital/P.revenue.total*100).toFixed(1)}%, 이익률 ${(P.op.digital/P.revenue.digital*100).toFixed(1)}%)은 판촉비 집중에도 불구하고 수익성이 개선 여지가 큽니다.<br><br>
+    <strong>비용 구조:</strong> 판관비 ${fB(P.sga.total)}억 중 인건비 ${laborRatio.toFixed(0)}%, 판촉비 ${promoRatio.toFixed(0)}%로 상위 2개 항목이 전체의 ${(laborRatio+promoRatio).toFixed(0)}%를 차지합니다. 특히 소매채널 인건비율(${(SD['인건비합계'].retail/P.sga.retail*100).toFixed(1)}%)과 디지털채널 판촉비율(${(SD['판매촉진비'].digital/P.sga.digital*100).toFixed(1)}%)이 구조적 주요 원가요인입니다.
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card ok-card"><div class="kpi-v ok">${fB(P.gross.total)}억</div><div class="kpi-l">매출총이익</div><div class="kpi-l">${(P.gross.total/P.revenue.total*100).toFixed(1)}%</div></div>
+    <div class="kpi-card"><div class="kpi-v">${fB(P.sga.total)}억</div><div class="kpi-l">판관비</div><div class="kpi-l">매출대비 ${(P.sga.total/P.revenue.total*100).toFixed(1)}%</div></div>
+    <div class="kpi-card ok-card"><div class="kpi-v ok">${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%</div><div class="kpi-l">최고 이익률</div><div class="kpi-l">${CN[bestCh]}</div></div>
+    <div class="kpi-card warn-card"><div class="kpi-v warn">${(P.op.corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}%</div><div class="kpi-l">최저 이익률</div><div class="kpi-l">법인영업</div></div>
+    <div class="kpi-card ok-card"><div class="kpi-v ok">${((bestHq.gp-bestHq.sga)/bestHq.rev*100).toFixed(1)}%</div><div class="kpi-l">본부 최고</div><div class="kpi-l">${bestHq.nm}</div></div>
+    <div class="kpi-card warn-card"><div class="kpi-v warn">${((worstHq.gp-worstHq.sga)/worstHq.rev*100).toFixed(1)}%</div><div class="kpi-l">본부 최저</div><div class="kpi-l">${worstHq.nm}</div></div>
+  </div>
+
+  <h1>Ⅱ. 채널별 손익 분석</h1>
+  <h2>2-1. 채널별 손익 현황</h2>
+  <table>
+    <thead><tr><th>채널</th><th>매출(백만)</th><th>매출비중</th><th>매출총이익</th><th>총이익률</th><th>판관비</th><th>영업이익</th><th>영업이익률</th><th>평가</th></tr></thead>
+    <tbody>`;
+  const allChOpm=CHS.map(c=>P.op[c]/P.revenue[c]*100);
+  const maxOpm=Math.max(...allChOpm),minOpm=Math.min(...allChOpm);
+  CHS.forEach(c=>{
+    const opmC=P.op[c]/P.revenue[c]*100,gpmC=P.gross[c]/P.revenue[c]*100;
+    const badge=opmC>=15?'badge-r':(opmC>=5?'badge-y':(opmC>=2?'badge-o':'badge-red'));
+    const grade=opmC>=15?'◎ 우수':(opmC>=5?'○ 양호':(opmC>=2?'△ 주의':'✕ 개선'));
+    h+=`<tr><td>${CN[c]}</td><td>${fM(P.revenue[c])}</td><td>${(P.revenue[c]/P.revenue.total*100).toFixed(1)}%</td>
+    <td>${fM(P.gross[c])}</td><td class="${gpmC>25?'pos':''}">  ${gpmC.toFixed(1)}%</td>
+    <td>${fM(P.sga[c])}</td><td class="${opmC>0?'pos':'neg'}">${fM(P.op[c])}</td>
+    <td class="${opmC>5?'pos':opmC>0?'':' neg'}">${opmC.toFixed(1)}%</td>
+    <td><span class="badge ${badge}">${grade}</span></td></tr>`;
+  });
+  h+=`<tr class="total"><td>합 계</td><td>${fM(P.revenue.total)}</td><td>100%</td><td>${fM(P.gross.total)}</td><td>${(P.gross.total/P.revenue.total*100).toFixed(1)}%</td><td>${fM(P.sga.total)}</td><td class="pos">${fM(P.op.total)}</td><td class="pos">${opm.toFixed(1)}%</td><td>-</td></tr>
+  </tbody></table>
+  
+  <div class="insight">📌 <strong>수익성 순위:</strong> 소상공인(${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%) &gt; IoT(${(P.op.iot/P.revenue.iot*100).toFixed(1)}%) &gt; 도매(${(P.op.wholesale/P.revenue.wholesale*100).toFixed(1)}%) &gt; 소매(${(P.op.retail/P.revenue.retail*100).toFixed(1)}%) &gt; 기업/공공(${(P.op.enterprise/P.revenue.enterprise*100).toFixed(1)}%) &gt; 디지털(${(P.op.digital/P.revenue.digital*100).toFixed(1)}%) &gt; 법인영업(${(P.op.corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}%)</div>
+  <div class="warn">⚠️ <strong>법인영업 이익률 ${(P.op.corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}%:</strong> 매출 대비 판매수수료(${fB(SD['판매수수료'].corporate_sales)}억, 비율 ${(SD['판매수수료'].corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}%)가 과중합니다. 수수료 구조 재설계가 필요합니다.</div>
+  <div class="warn">⚠️ <strong>디지털 채널:</strong> 매출비중 ${(P.revenue.digital/P.revenue.total*100).toFixed(0)}%로 1위이나 이익률 ${(P.op.digital/P.revenue.digital*100).toFixed(1)}%에 그침. 판촉비(${fB(SD['판매촉진비'].digital)}억)가 영업이익(${fB(P.op.digital)}억)의 ${(SD['판매촉진비'].digital/P.op.digital).toFixed(1)}배에 달하는 구조적 문제 존재</div>
+
+  <h1>Ⅲ. 판관비(SG&A) 구조 분석</h1>
+  <h2>3-1. 판관비 항목별 현황</h2>
+  <table>
+    <thead><tr><th>비용항목</th><th>금액(백만)</th><th>판관비 비중</th><th>매출 대비</th><th>최다 채널</th></tr></thead>
+    <tbody>`;
+  const sgaItems=['인건비합계','판매촉진비','지급수수료','복리후생비','임차료','판매수수료','운반비'];
+  const sgaColors={'인건비합계':'#3b82f6','판매촉진비':'#ef4444','지급수수료':'#8b5cf6','복리후생비':'#f59e0b','임차료':'#10b981','판매수수료':'#f97316','운반비':'#6366f1'};
+  sgaItems.forEach(item=>{
+    const topCh=CHS.reduce((a,b)=>(SD[item][a]||0)>(SD[item][b]||0)?a:b);
+    const pctSga=(SD[item].total/P.sga.total*100).toFixed(1);
+    const pctRev=(SD[item].total/P.revenue.total*100).toFixed(1);
+    h+=`<tr><td><span style="color:${sgaColors[item]};font-weight:700">■</span> ${item}</td><td>${fM(SD[item].total)}</td><td>${pctSga}%</td><td>${pctRev}%</td><td>${CN[topCh]}(${fM(SD[item][topCh]||0)})</td></tr>`;
+  });
+  h+=`<tr class="total"><td>판관비 합계</td><td>${fM(P.sga.total)}</td><td>100%</td><td>${(P.sga.total/P.revenue.total*100).toFixed(1)}%</td><td>-</td></tr></tbody></table>
+  
+  <div class="caution">💡 <strong>인건비 집중도:</strong> 전체 판관비의 ${laborRatio.toFixed(1)}%(${fB(SD['인건비합계'].total)}억)가 인건비. 특히 소매 채널 인건비(${fB(SD['인건비합계'].retail)}억)는 소매 판관비의 ${(SD['인건비합계'].retail/P.sga.retail*100).toFixed(1)}%로 채널 내 비중 최고.</div>
+
+  <h2>3-2. 채널별 비용구조 비교 (인건비 vs 판촉비)</h2>
+  <table>
+    <thead><tr><th>채널</th><th>인건비(백만)</th><th>판관비내 비중</th><th>판촉비(백만)</th><th>판관비내 비중</th><th>양대비용 합계</th><th>비용 특성</th></tr></thead>
+    <tbody>`;
+  CHS.forEach(c=>{
+    const lb=SD['인건비합계'][c]||0,pr=SD['판매촉진비'][c]||0;
+    const lbRt=(lb/P.sga[c]*100),prRt=(pr/P.sga[c]*100);
+    const feature=prRt>lbRt?'판촉 집중':'인건비 집중';
+    const fclass=prRt>lbRt?'caution':'insight';
+    h+=`<tr><td>${CN[c]}</td><td>${fM(lb)}</td><td class="${lbRt>50?'warn':''} ">${lbRt.toFixed(1)}%</td><td>${fM(pr)}</td><td class="${prRt>40?'warn':''} ">${prRt.toFixed(1)}%</td><td>${((lbRt+prRt)).toFixed(1)}%</td><td><span class="badge ${prRt>lbRt?'badge-o':'badge-y'}">${feature}</span></td></tr>`;
+  });
+  h+=`</tbody></table>
+  <div class="insight">📌 <strong>채널별 비용 특성 이원화:</strong> 소매·도매·기업 채널은 인건비 중심 구조(65~68%), 디지털 채널은 판촉비 중심 구조(59.1%)로 채널별 원가 절감 전략이 달라야 합니다.</div>
+
+  <h1>Ⅳ. 본부별 수익성 분석</h1>
+  <h2>4-1. 본부별 손익 현황</h2>
+  <table>
+    <thead><tr><th>순위</th><th>본부</th><th>매출(백만)</th><th>매출총이익</th><th>총이익률</th><th>판관비</th><th>판관비율</th><th>영업이익</th><th>영업이익률</th></tr></thead>
+    <tbody>`;
+  sortedHq.forEach((h2,i)=>{
+    const op=h2.gp-h2.sga;const gpm=h2.gp/h2.rev*100;const opmH=op/h2.rev*100;const sgaRt=h2.sga/h2.rev*100;
+    h+=`<tr><td style="text-align:center;font-weight:800">${i+1}</td><td>${h2.nm}</td><td>${fM(h2.rev)}</td><td>${fM(h2.gp)}</td><td class="${gpm>50?'pos':''}">${gpm.toFixed(1)}%</td><td>${fM(h2.sga)}</td><td class="${sgaRt<40?'pos':'neg'}">${sgaRt.toFixed(1)}%</td><td class="${op>0?'pos':'neg'}">${fM(op)}</td><td class="${opmH>5?'pos':'neg'}">${opmH.toFixed(1)}%</td></tr>`;
+  });
+  h+=`</tbody></table>
+  <div class="insight">📌 <strong>${sortedHq[0].nm}</strong> 수익성 최우수(${((sortedHq[0].gp-sortedHq[0].sga)/sortedHq[0].rev*100).toFixed(1)}%). <strong>${sortedHq[sortedHq.length-1].nm}</strong> 최하위 — 판관비율 ${(sortedHq[sortedHq.length-1].sga/sortedHq[sortedHq.length-1].rev*100).toFixed(1)}%로 평균 대비 집중 점검 필요</div>
+
+  <h1>Ⅴ. 리스크 워치리스트</h1>`;
+  // Risk items
+  const risks=[
+    {lvl:'HIGH',item:'법인영업 수수료 구조',detail:`판매수수료 ${fB(SD['판매수수료'].corporate_sales)}억 vs 영업이익 ${fB(P.op.corporate_sales)}억 → 수수료가 이익의 ${(SD['판매수수료'].corporate_sales/P.op.corporate_sales).toFixed(1)}배`,action:'수수료 체계 재설계, 직영 전환 검토'},
+    {lvl:'HIGH',item:'디지털 판촉비 효율성',detail:`판촉비 ${fB(SD['판매촉진비'].digital)}억 지출, 영업이익률 ${(P.op.digital/P.revenue.digital*100).toFixed(1)}%에 그침`,action:'ROI 기반 판촉 예산 재배분, 성과 지표 연동'},
+    {lvl:'MED',item:'IoT 채널 수익 집중도',detail:`영업이익 ${fB(P.op.iot)}억(이익률 ${(P.op.iot/P.revenue.iot*100).toFixed(1)}%)이나 매출 비중 ${(P.revenue.iot/P.revenue.total*100).toFixed(1)}%로 편중 위험`,action:'IoT 채널 확대 전략 수립'},
+    {lvl:'MED',item:'소매 인건비 효율성',detail:`인건비 ${fB(SD['인건비합계'].retail)}억, 판관비 대비 ${(SD['인건비합계'].retail/P.sga.retail*100).toFixed(1)}% — 1인당 생산성 관리 필요`,action:'영업직 직무수당 체계 연계, 생산성 KPI 강화'},
+    {lvl:'LOW',item:`${sortedHq[sortedHq.length-1].nm} 판관비`,detail:`판관비율 ${(sortedHq[sortedHq.length-1].sga/sortedHq[sortedHq.length-1].rev*100).toFixed(1)}%로 본부 중 최고`,action:'비용 구조 진단 및 효율화 방안 수립'}
+  ];
+  h+=`<table class="priority-table">
+    <thead><tr><th>등급</th><th>리스크 항목</th><th>현황</th><th>개선 방향</th></tr></thead><tbody>`;
+  risks.forEach(r=>{
+    const bc=r.lvl==='HIGH'?'badge-red':(r.lvl==='MED'?'badge-o':'badge-y');
+    h+=`<tr><td style="text-align:center"><span class="badge ${bc}">${r.lvl}</span></td><td>${r.item}</td><td style="font-size:10.5px">${r.detail}</td><td style="font-size:10.5px">${r.action}</td></tr>`;
+  });
+  h+=`</tbody></table>
+
+  <h1>Ⅵ. 전략적 실행 권고안</h1>
+  <div class="action">
+  ① <strong>[즉시] 법인영업 수수료 구조 점검 (1Q 내)</strong><br>
+  &nbsp;&nbsp;&nbsp;판매수수료 ${fB(SD['판매수수료'].corporate_sales)}억이 영업이익(${fB(P.op.corporate_sales)}억)을 초과하는 구조적 문제 해소. 직영 전환 또는 수수료율 재협의 추진<br><br>
+  ② <strong>[단기] 디지털 판촉 ROI 관리 체계 구축 (1Q~2Q)</strong><br>
+  &nbsp;&nbsp;&nbsp;판촉비 ${fB(SD['판매촉진비'].digital)}억 지출 대비 효과 측정 지표 신설. 성과 연동형 예산 운영으로 이익률 목표 5% 이상 달성<br><br>
+  ③ <strong>[중기] 고수익 채널 믹스 최적화 (2H)</strong><br>
+  &nbsp;&nbsp;&nbsp;소상공인(이익률 ${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%) 채널 비중 확대 전략 수립. 현재 ${(P.revenue.small_biz/P.revenue.total*100).toFixed(1)}% → 목표 확대<br><br>
+  ④ <strong>[중기] 소매 인건비 효율화 프로그램 (연간)</strong><br>
+  &nbsp;&nbsp;&nbsp;영업직 직무수당 체계(완료) 기반 생산성 KPI 연계 강화. 1인당 매출/이익 기준 관리
+  </div>
+
+  <div class="footnote">* 본 보고서는 ${D.period} 공식 마감 데이터 기준입니다. 단위: 백만원(손익), 억원(요약). 대외비.</div>
+  </div></body></html>`;
+  openReport(h,'Executive 종합 보고서');
+}
+
+// ==================== ② 채널×비용 구조 심층분석 ====================
+function genChannelCostReport(){
+  const P=D.profit,SD=D.sga_detail;
+  const sgaItems=['인건비합계','판매촉진비','복리후생비','임차료','판매수수료','지급수수료','운반비'];
+  const itemColors={'인건비합계':'#2563eb','판매촉진비':'#dc2626','복리후생비':'#d97706','임차료':'#16a34a','판매수수료':'#7c3aed','지급수수료':'#0891b2','운반비':'#9333ea'};
+  const chColors={retail:'#0369a1',wholesale:'#059669',digital:'#7c3aed',enterprise:'#c2410c',iot:'#ca8a04',corporate_sales:'#dc2626',small_biz:'#0f766e'};
+
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>채널×비용 구조 분석</title>${rptStyle()}</head><body>
+  <div class="cover">
+    <div class="cover-tag">SG&amp;A Deep Dive · For Management</div>
+    <div class="cover-title">채널별 비용구조 심층분석 보고서</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 채널×비용항목 교차 분석</div>
+    <div class="cover-meta">
+      <div class="cover-kpi"><div class="cover-kpi-v">${fB(P.sga.total)}억</div><div class="cover-kpi-l">총 판관비</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v">${(P.sga.total/P.revenue.total*100).toFixed(1)}%</div><div class="cover-kpi-l">매출 대비 판관비율</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v">${fB(SD['인건비합계'].total)}억</div><div class="cover-kpi-l">인건비 (${(SD['인건비합계'].total/P.sga.total*100).toFixed(0)}%)</div></div>
+    </div>
+  </div>
+  <div class="page">
+
+  <h1>Ⅰ. 채널별 비용구조 전략적 개요</h1>
+  <div class="exec-box">
+    전사 판관비 ${fB(P.sga.total)}억의 구조를 분석한 결과, 채널별로 뚜렷이 다른 2가지 비용 유형이 식별됩니다.<br><br>
+    <strong>① 인건비 주도형 채널 (소매·도매·기업/공공)</strong>: 판관비의 65~68%가 인건비로 구성되며, 현장 영업인력 생산성이 수익성을 결정짓는 핵심 변수입니다.<br>
+    <strong>② 판촉비 주도형 채널 (디지털)</strong>: 판관비의 59.1%가 판촉비로 구성. 마케팅 ROI 관리 체계가 미흡할 경우 이익이 급감하는 고위험 구조입니다.<br>
+    <strong>③ 수수료 주도형 채널 (법인영업·IoT)</strong>: 판매수수료 비중이 높아 외부 의존도가 크며, 직영 전환 또는 수수료 재협상이 필요합니다.
+  </div>
+
+  <h1>Ⅱ. 채널별 비용항목 매트릭스</h1>
+  <h2>2-1. 절대금액 기준 (단위: 백만원)</h2>
+  <table>
+    <thead><tr><th>비용항목</th><th>전사합계</th><th>소매</th><th>도매</th><th>디지털</th><th>기업/공공</th><th>IoT</th><th>법인영업</th><th>소상공인</th></tr></thead>
+    <tbody>`;
+  sgaItems.forEach(item=>{
+    const topCh=CHS.reduce((a,b)=>(SD[item][a]||0)>(SD[item][b]||0)?a:b);
+    h+=`<tr><td><span style="display:inline-block;width:8px;height:8px;background:${itemColors[item]};border-radius:2px;margin-right:5px;vertical-align:middle"></span>${item}</td>
+    <td style="font-weight:700">${fM(SD[item].total)}</td>`;
+    CHS.forEach(c=>{
+      const v=SD[item][c]||0;const isTop=c===topCh;
+      h+=`<td class="${isTop?'hi':''}">${fM(v)}${isTop?' ▲':''}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+=`<tr class="total"><td>판관비 합계</td><td>${fM(P.sga.total)}</td>${CHS.map(c=>`<td>${fM(P.sga[c])}</td>`).join('')}</tr>
+  </tbody></table>
+  <div class="insight">▲ 표시: 채널 중 해당 항목 최대 지출 채널</div>
+
+  <h2>2-2. 채널 판관비 내 항목 비중 (%) — 비용 DNA 분석</h2>
+  <table>
+    <thead><tr><th>비용항목</th><th>전사</th><th>소매</th><th>도매</th><th>디지털</th><th>기업/공공</th><th>IoT</th><th>법인영업</th><th>소상공인</th></tr></thead>
+    <tbody>`;
+  sgaItems.forEach(item=>{
+    h+=`<tr><td>${item}</td><td>${(SD[item].total/P.sga.total*100).toFixed(1)}%</td>`;
+    CHS.forEach(c=>{
+      const r=(SD[item][c]||0)/P.sga[c]*100;
+      const cls=r>50?'neg':(r>35?'caution':'');
+      h+=`<td class="${cls}" style="${r>50?'font-weight:700;':''}">${r.toFixed(1)}%</td>`;
+    });
+    h+='</tr>';
+  });
+  h+=`<tr class="total"><td>합 계</td><td>100%</td>${CHS.map(()=>'<td>100%</td>').join('')}</tr></tbody></table>
+  <div class="warn">⚠️ 채널 내 비중 50% 이상 항목: 집중 관리 대상 (빨간색). 35% 이상: 주의 관찰 대상</div>
+
+  <h2>2-3. 매출 대비 비용항목 비율 (%) — 채널 효율성 지표</h2>
+  <table>
+    <thead><tr><th>비용항목</th><th>전사</th><th>소매</th><th>도매</th><th>디지털</th><th>기업/공공</th><th>IoT</th><th>법인영업</th><th>소상공인</th></tr></thead>
+    <tbody>`;
+  sgaItems.forEach(item=>{
+    h+=`<tr><td>${item}</td><td>${(SD[item].total/P.revenue.total*100).toFixed(1)}%</td>`;
+    CHS.forEach(c=>{
+      const r=(SD[item][c]||0)/P.revenue[c]*100;
+      h+=`<td class="${r>20?'neg':r>10?'':''}">${r.toFixed(1)}%</td>`;
+    });
+    h+='</tr>';
+  });
+  h+=`<tr class="total" style="background:#dbeafe"><td>영업이익률</td><td class="pos">${(P.op.total/P.revenue.total*100).toFixed(1)}%</td>${CHS.map(c=>`<td class="${P.op[c]/P.revenue[c]>0.05?'pos':'neg'}">${(P.op[c]/P.revenue[c]*100).toFixed(1)}%</td>`).join('')}</tr></tbody></table>
+
+  <h1>Ⅲ. 채널별 비용구조 심층 분석</h1>`;
+
+  // Per channel detailed analysis
+  const chInsights = {
+    retail:{title:'소매 채널',color:'#0369a1',key:'인건비 주도형',summary:'인건비 집중 구조. 영업인력 생산성이 핵심 레버',risk:'인건비율 64.4% — 판관비의 절반 이상이 인건비',opp:'직무수당 연계 생산성 향상 시 이익률 1%p 개선 시 순이익 +15억'},
+    wholesale:{title:'도매 채널',color:'#059669',key:'인건비 주도형',summary:'안정적 수익 구조. 인건비 효율이 관건',risk:'인건비율 67.2% — 위탁대가 정산 이슈 지속 관리 필요',opp:'엣지 프로그램 2.0 통한 대리점 생산성 향상'},
+    digital:{title:'디지털 채널',color:'#7c3aed',key:'판촉비 주도형',summary:'매출 1위 채널이나 판촉비 과다로 수익성 저조',risk:`판촉비 ${fB(SD['판매촉진비'].digital)}억 — 영업이익(${fB(P.op.digital)}억)의 ${(SD['판매촉진비'].digital/P.op.digital).toFixed(1)}배 지출`,opp:'ROI 기반 판촉 예산 재배분 → 이익률 목표 5% 달성 시 +73억'},
+    enterprise:{title:'기업/공공 채널',color:'#c2410c',key:'인건비 주도형',summary:'이익률 안정적. 규모 확대가 관건',risk:'매출 비중 1.8%로 낮아 고정비 부담 상대적으로 큼',opp:'대형사업 수주율 확대 과제 연계 — 매출 확대 시 고정비 레버리지 효과'},
+    iot:{title:'IoT 채널',color:'#ca8a04',key:'수수료 주도형',summary:'최고 이익률 채널이나 매출 규모 소형',risk:`판매수수료 ${fB(SD['판매수수료'].iot)}억 — 매출 대비 ${(SD['판매수수료'].iot/P.revenue.iot*100).toFixed(1)}%로 높음`,opp:'IoT 원격관제 솔루션 확장 과제 연계 → 채널 성장 가속화'},
+    corporate_sales:{title:'법인영업 채널',color:'#dc2626',key:'수수료 주도형',summary:'수수료 지출이 이익을 초과하는 구조적 문제',risk:`판매수수료 ${fB(SD['판매수수료'].corporate_sales)}억 >> 영업이익 ${fB(P.op.corporate_sales)}억 — 수수료율 재설계 시급`,opp:'직영전환 또는 수수료 인하 협상으로 수익 구조 개선'},
+    small_biz:{title:'소상공인 채널',color:'#0f766e',key:'균형형 (최고 수익)',summary:'판관비 구조가 가장 균형적이며 이익률 최고',risk:'복리후생비 비중이 상대적으로 높음(27.8%)',opp:'채널 규모 확대를 통한 전사 수익성 제고 — 비중 확대 우선 과제'}
+  };
+
+  CHS.forEach(c=>{
+    const ins=chInsights[c];const rev=P.revenue[c],sga=P.sga[c],op=P.op[c];
+    const top2=sgaItems.slice().sort((a,b)=>(SD[b][c]||0)-(SD[a][c]||0)).slice(0,3);
+    h+=`<div class="ch-cost-block">
+      <div class="ch-cost-header" style="background:${ins.color}">
+        <span>${ins.title} <span class="ch-cost-sub">| ${ins.key}</span></span>
+        <span>영업이익률 ${(op/rev*100).toFixed(1)}%</span>
+      </div>
+      <div class="ch-cost-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:6px"><div style="font-size:18px;font-weight:900;color:${ins.color}">${fB(rev)}억</div><div style="font-size:9px;color:#64748b">매출</div></div>
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:6px"><div style="font-size:18px;font-weight:900;color:#64748b">${fB(sga)}억</div><div style="font-size:9px;color:#64748b">판관비 (${(sga/rev*100).toFixed(1)}%)</div></div>
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:6px"><div style="font-size:18px;font-weight:900;color:${op>0?'#059669':'#dc2626'}">${fB(op)}억</div><div style="font-size:9px;color:#64748b">영업이익</div></div>
+        </div>
+        <div style="font-size:10.5px;font-weight:700;color:#475569;margin-bottom:5px">주요 비용 항목 TOP 3</div>`;
+    top2.forEach(item=>{
+      const v=SD[item][c]||0;const pct=(v/sga*100).toFixed(1);const pctRev=(v/rev*100).toFixed(1);
+      const w=Math.min(100,(v/sga*100)*1.2);
+      h+=`<div class="bar-row"><div class="bar-label">${item.replace('합계','')}</div><div class="bar-bg"><div class="bar-fill" style="width:${w}%;background:${itemColors[item]}">${pct}%</div></div><div class="bar-val">${fM(v)}백만</div></div>`;
+    });
+    h+=`<div style="margin-top:8px;font-size:10.5px;padding:7px 10px;border-radius:6px;background:#fef2f2;color:#7f1d1d;border-left:3px solid #dc2626"><strong>리스크:</strong> ${ins.risk}</div>
+    <div style="margin-top:5px;font-size:10.5px;padding:7px 10px;border-radius:6px;background:#f0fdf4;color:#14532d;border-left:3px solid #16a34a"><strong>기회:</strong> ${ins.opp}</div>
+      </div></div>`;
+  });
+
+  h+=`<h1>Ⅳ. 비용 최적화 우선순위 매트릭스</h1>
+  <table class="priority-table">
+    <thead><tr><th>우선순위</th><th>개선 과제</th><th>현황</th><th>목표</th><th>예상 효과</th></tr></thead>
+    <tbody>
+    <tr><td style="text-align:center"><span class="badge badge-red">1순위</span></td><td>법인영업 수수료 재설계</td><td>판매수수료 ${fB(SD['판매수수료'].corporate_sales)}억, 영업이익 ${fB(P.op.corporate_sales)}억</td><td>수수료율 30% 인하</td><td>+${(SD['판매수수료'].corporate_sales*0.3/1e8).toFixed(1)}억 이익 개선</td></tr>
+    <tr><td style="text-align:center"><span class="badge badge-red">1순위</span></td><td>디지털 판촉비 ROI 관리</td><td>판촉비 ${fB(SD['판매촉진비'].digital)}억, 이익률 ${(P.op.digital/P.revenue.digital*100).toFixed(1)}%</td><td>이익률 5% 달성</td><td>+${((P.revenue.digital*0.05-P.op.digital)/1e8).toFixed(1)}억 이익 개선</td></tr>
+    <tr><td style="text-align:center"><span class="badge badge-o">2순위</span></td><td>소매 인건비 생산성 향상</td><td>인건비 ${fB(SD['인건비합계'].retail)}억, 판관비내 ${(SD['인건비합계'].retail/P.sga.retail*100).toFixed(1)}%</td><td>1인당 매출 3% 향상</td><td>인건비 효율 동일 시 이익률 +0.3%p</td></tr>
+    <tr><td style="text-align:center"><span class="badge badge-y">3순위</span></td><td>소상공인 채널 비중 확대</td><td>현 매출비중 ${(P.revenue.small_biz/P.revenue.total*100).toFixed(1)}%, 이익률 ${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%</td><td>비중 5% 달성</td><td>이익률 최고 채널 믹스 개선</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footnote">* 본 보고서는 ${D.period} 공식 마감 데이터 기준입니다. 채널별 비용은 원가 배부 방식에 따라 차이가 있을 수 있습니다. 단위: 백만원(상세), 억원(요약). 대외비.</div>
+  </div></body></html>`;
+  openReport(h,'채널×비용 구조 심층분석');
+}
+
+// ==================== ③ 기타 보고서 ====================
+function genProfitReport(type){
+  const P=D.profit,SD=D.sga_detail,HC=D.hq_channel||{},K=D.kpi;
+  const RS=rptStyle();
+  const sortedHq=[...D.hq].sort((a,b)=>(b.gp-b.sga)/b.rev-(a.gp-a.sga)/a.rev);
+  const fPct=v=>(v*100).toFixed(1)+'%';
+  const fBn=n=>(n/1e8).toFixed(1);
+  const fMn=n=>Math.round(n/1e6).toLocaleString();
+  const clrOpm=v=>v>0.1?'#059669':v>0.05?'#d97706':'#dc2626';
+  const bar=(v,w,c)=>`<div style="width:${w||120}px;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px"><div style="width:${Math.min(100,Math.round(Math.abs(v)*200))}%;height:100%;background:${c||clrOpm(v)};border-radius:5px"></div></div>`;
+
+  if(type==='hq'){
+    // ── 본부별 채널 교차 손익 고도화 보고서 ──────────────────────────────
+    let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>본부별 채널 교차 손익</title>${RS}</head><body>`;
+    
+    // Cover
+    const best=sortedHq[0],worst=sortedHq[sortedHq.length-1];
+    const bestOp=(best.gp-best.sga)/best.rev, worstOp=(worst.gp-worst.sga)/worst.rev;
+    h+=`<div class="cover">
+      <div class="cover-tag">Confidential · 본부별 채널 교차 손익 분석 보고서</div>
+      <div class="cover-title">본부별 채널 교차<br>수익성 심층 분석</div>
+      <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 본부×채널 교차 수익성 · 비용구조 · 전략 권고</div>
+      <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
+        ${sortedHq.map((hq,i)=>{const op=hq.gp-hq.sga;const opm=op/hq.rev;return `<div style="flex:1;min-width:140px;background:rgba(255,255,255,.08);border-radius:10px;padding:12px 14px">
+          <div style="font-size:10px;color:rgba(255,255,255,.5);font-weight:600">#${i+1} ${hq.nm}</div>
+          <div style="font-size:22px;font-weight:900;color:${opm>0.07?'#34d399':opm>0.04?'#fbbf24':'#f87171'}">${(opm*100).toFixed(1)}%</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.5)">영업이익 ${fBn(op)}억</div>
+        </div>`;}).join('')}
+      </div>
+    </div>`;
+
+    // 1. Executive Summary
+    h+=`<h2>Ⅰ. Executive Summary</h2>
+    <div class="exec-box">
+      수익성 1위 <b>${best.nm}</b>(영업이익률 ${(bestOp*100).toFixed(1)}%) vs 5위 <b>${worst.nm}</b>(${(worstOp*100).toFixed(1)}%) — 격차 <b>${((bestOp-worstOp)*100).toFixed(1)}%p</b><br>
+      전체 5개 본부 합산: 매출 <b>${fBn(D.hq.reduce((s,h)=>s+h.rev,0))}억</b> | 영업이익 <b>${fBn(D.hq.reduce((s,h)=>s+(h.gp-h.sga),0))}억</b>
+    </div>`;
+
+    // 2. 본부별 전체 손익 순위 테이블
+    h+=`<h2>Ⅱ. 본부별 손익 현황 (수익성 순위)</h2>
+    <table><thead><tr><th>순위</th><th>본부</th><th class="num">매출(백만)</th><th class="num">총이익</th><th class="num">총이익률</th><th class="num">판관비</th><th class="num">판관비율</th><th class="num">영업이익</th><th class="num">영업이익률</th></tr></thead><tbody>`;
+    sortedHq.forEach((hq,i)=>{
+      const op=hq.gp-hq.sga, opm=op/hq.rev;
+      h+=`<tr><td style="text-align:center;font-weight:800;font-size:16px">${i+1}</td>
+        <td><b>${hq.nm}</b></td>
+        <td class="num">${fMn(hq.rev)}</td>
+        <td class="num">${fMn(hq.gp)}</td>
+        <td class="num ${hq.gp/hq.rev>0.5?'pos':''}">${(hq.gp/hq.rev*100).toFixed(1)}%</td>
+        <td class="num">${fMn(hq.sga)}</td>
+        <td class="num ${hq.sga/hq.rev<0.4?'pos':''}">${(hq.sga/hq.rev*100).toFixed(1)}%</td>
+        <td class="num ${op>0?'pos':'neg'}" style="font-weight:700">${fMn(op)}</td>
+        <td class="num ${opm>0.05?'pos':'neg'}" style="font-weight:700">${(opm*100).toFixed(1)}%</td></tr>`;
+    });
+    h+=`</tbody></table>`;
+
+    // 3. 채널×본부 교차 매트릭스
+    const kpiChMap={'강서본부':'강서본부','동부본부':'동부본부','서부본부':'서부본부','강북본부':'강북본부','강남본부':'강남본부'};
+    const hqOrder=['강서본부','동부본부','서부본부','강북본부','강남본부']; // KPI order
+    const chLabels=[
+      {key:'retail',nm:'소매',color:'#38bdf8',kpiKey:'rt'},
+      {key:'wholesale',nm:'도매',color:'#34d399',kpiKey:'wh'},
+      {key:'digital',nm:'디지털',color:'#a78bfa',kpiKey:null},
+      {key:'small_biz',nm:'소상공인',color:'#818cf8',kpiKey:'sm'}
+    ];
+
+    h+=`<h2>Ⅲ. 채널×본부 교차 영업이익 매트릭스</h2>
+    <div class="insight">📌 각 셀은 해당 본부의 채널별 추정 영업이익(백만원). 배경색: 🟢높음 🟡보통 🔴낮음 · KPI 득점과 교차 검증</div>
+    <table><thead><tr><th>채널</th><th style="text-align:center">가중치</th>`;
+    hqOrder.forEach(hq=>{ h+=`<th class="num">${hq}</th>`; });
+    h+=`<th class="num">전사 합계</th></tr></thead><tbody>`;
+
+    chLabels.forEach(ch=>{
+      const vals=hqOrder.map(hq=>HC[hq]?.op?.[ch.key]||0);
+      const maxV=Math.max(...vals), minV=Math.min(...vals);
+      const totalCh=P.op[ch.key];
+      const wt={retail:'60%',wholesale:'30%',small_biz:'10%',digital:'—'}[ch.key]||'—';
+      h+=`<tr><td><span style="display:inline-block;width:10px;height:10px;background:${ch.color};border-radius:50%;margin-right:6px"></span><b>${ch.nm}</b></td>
+        <td style="text-align:center;font-size:11px;color:#64748b">${wt}</td>`;
+      vals.forEach((v,vi)=>{
+        const bg=v===maxV?'#dcfce7':v===minV?'#fee2e2':'#f1f5f9';
+        const fc=v===maxV?'#059669':v===minV?'#dc2626':'#1e293b';
+        const kpiV=ch.kpiKey?K.find(k=>k.hq===hqOrder[vi])?.[ch.kpiKey]?.t:null;
+        h+=`<td class="num" style="background:${bg};color:${fc};font-weight:700">${fMn(v)}<br>
+          ${kpiV?`<span style="font-size:9px;color:${kpiV>=90?'#059669':kpiV>=80?'#d97706':'#dc2626'};font-weight:600">KPI ${kpiV.toFixed(1)}</span>`:''}
+        </td>`;
+      });
+      h+=`<td class="num" style="font-weight:700;color:${totalCh>0?'#059669':'#dc2626'}">${fMn(totalCh)}</td></tr>`;
+    });
+    h+=`</tbody></table>`;
+
+    // 4. 본부별 채널 구성 분석 (각 본부 심층)
+    h+=`<h2>Ⅳ. 본부별 채널 구성 심층 분석</h2>`;
+    
+    sortedHq.forEach((hq, rank)=>{
+      const op=hq.gp-hq.sga, opm=op/hq.rev;
+      const hqCh=HC[hq.nm]||{};
+      const kpiHq=K.find(k=>k.hq===hq.nm)||{};
+      
+      // Channel breakdown for this HQ
+      const chBreakdown=chLabels.map(ch=>({
+        ...ch,
+        rev: hqCh.rev?.[ch.key]||0,
+        gp: hqCh.gp?.[ch.key]||0,
+        opVal: hqCh.op?.[ch.key]||0,
+        kpiScore: ch.kpiKey?kpiHq[ch.kpiKey]?.t:null
+      }));
+      const totalChRev=chBreakdown.reduce((s,c)=>s+c.rev,0);
+      
+      // Find strongest/weakest channel
+      const chWithOp=chBreakdown.filter(c=>c.opVal!==0);
+      const bestCh=chWithOp.length?chWithOp.reduce((a,b)=>b.opVal/b.rev>a.opVal/a.rev?b:a):null;
+      const worstCh=chWithOp.length?chWithOp.reduce((a,b)=>b.opVal/b.rev<a.opVal/a.rev?b:a):null;
+      
+      const borderClr=rank===0?'#059669':rank<=1?'#0284c7':rank<=2?'#d97706':'#dc2626';
+      h+=`<h3 style="border-left:5px solid ${borderClr};padding-left:12px;margin:24px 0 12px">${rank+1}위. ${hq.nm} — 영업이익률 ${(opm*100).toFixed(1)}%</h3>`;
+
+      // Summary boxes
+      h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px">매출</div>
+          <div style="font-size:18px;font-weight:800;color:#1e293b">${fBn(hq.rev)}억</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px">총이익률</div>
+          <div style="font-size:18px;font-weight:800;color:#0284c7">${(hq.gp/hq.rev*100).toFixed(1)}%</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px">판관비율</div>
+          <div style="font-size:18px;font-weight:800;color:#d97706">${(hq.sga/hq.rev*100).toFixed(1)}%</div>
+        </div>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px">영업이익</div>
+          <div style="font-size:18px;font-weight:800;color:${opm>0.05?'#059669':'#dc2626'}">${fBn(op)}억</div>
+        </div>
+      </div>`;
+
+      // Channel detail table for this HQ
+      h+=`<table><thead><tr><th>채널</th><th class="num">매출(백만)</th><th class="num">매출비중</th><th class="num">총이익</th><th class="num">총이익률</th><th class="num">영업이익</th><th class="num">영업이익률</th><th class="num">KPI득점</th></tr></thead><tbody>`;
+      chBreakdown.forEach(ch=>{
+        if(ch.rev===0) return;
+        const opmCh=ch.rev>0?ch.opVal/ch.rev:0;
+        const gpRate=ch.rev>0?ch.gp/ch.rev:0;
+        const isBest=bestCh&&ch.key===bestCh.key;
+        const isWorst=worstCh&&ch.key===worstCh.key;
+        h+=`<tr style="${isBest?'background:#f0fdf4':isWorst?'background:#fef2f2':''}">
+          <td><span style="display:inline-block;width:8px;height:8px;background:${ch.color};border-radius:50%;margin-right:6px"></span>
+            <b>${ch.nm}</b>${isBest?' 🏆':isWorst?' ⚠️':''}</td>
+          <td class="num">${fMn(ch.rev)}</td>
+          <td class="num">${totalChRev>0?(ch.rev/totalChRev*100).toFixed(1):'—'}%</td>
+          <td class="num">${ch.gp?fMn(ch.gp):'—'}</td>
+          <td class="num ${gpRate>0.5?'pos':''}">${ch.gp?(gpRate*100).toFixed(1)+'%':'—'}</td>
+          <td class="num ${ch.opVal>0?'pos':'neg'}" style="font-weight:700">${fMn(ch.opVal)}</td>
+          <td class="num ${opmCh>0.05?'pos':'neg'}" style="font-weight:700">${(opmCh*100).toFixed(1)}%</td>
+          <td class="num">${ch.kpiScore?`<span style="color:${ch.kpiScore>=90?'#059669':ch.kpiScore>=80?'#d97706':'#dc2626'};font-weight:700">${ch.kpiScore.toFixed(1)}</span>`:'—'}</td>
+        </tr>`;
+      });
+      h+=`</tbody></table>`;
+
+      // Channel revenue mix bar chart
+      h+=`<div style="margin:12px 0 6px;font-size:11px;font-weight:600;color:#475569">채널별 매출 구성</div>
+      <div style="display:flex;height:28px;border-radius:8px;overflow:hidden;gap:1px">`;
+      chBreakdown.filter(c=>c.rev>0).forEach(ch=>{
+        const pct=totalChRev>0?ch.rev/totalChRev*100:0;
+        h+=`<div title="${ch.nm}: ${pct.toFixed(1)}%" style="width:${pct.toFixed(1)}%;background:${ch.color};display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;min-width:${pct>8?'auto':'0'}">${pct>8?ch.nm:''}`;
+        h+=`</div>`;
+      });
+      h+=`</div><div style="display:flex;gap:12px;margin-top:6px;flex-wrap:wrap">`;
+      chBreakdown.filter(c=>c.rev>0).forEach(ch=>{
+        const pct=totalChRev>0?ch.rev/totalChRev*100:0;
+        h+=`<span style="font-size:10px;color:#64748b"><span style="display:inline-block;width:8px;height:8px;background:${ch.color};border-radius:2px;margin-right:3px"></span>${ch.nm} ${pct.toFixed(1)}%</span>`;
+      });
+      h+=`</div>`;
+
+      // Insight
+      const channelInsight=bestCh&&worstCh?
+        `<b>강점:</b> ${bestCh.nm} 채널 영업이익률 ${bestCh.rev>0?(bestCh.opVal/bestCh.rev*100).toFixed(1):0}% 최고 ${bestCh.kpiScore?`(KPI ${bestCh.kpiScore.toFixed(1)}점)`:''} — <b>약점:</b> ${worstCh.nm} 채널 ${worstCh.rev>0?(worstCh.opVal/worstCh.rev*100).toFixed(1):0}% 하위`:
+        '채널 분석 데이터 부족';
+      h+=`<div class="insight" style="margin-top:12px">📌 ${hq.nm} 진단: ${channelInsight}</div>`;
+    });
+
+    // 5. 채널별 본부 비교 분석
+    h+=`<h2>Ⅴ. 채널별 본부 수익성 비교</h2>`;
+    chLabels.forEach(ch=>{
+      const vals=hqOrder.map(hq=>({hq,op:HC[hq]?.op?.[ch.key]||0,rev:HC[hq]?.rev?.[ch.key]||0}));
+      const maxOpmHq=vals.reduce((a,b)=>(b.rev>0?b.op/b.rev:0)>(a.rev>0?a.op/a.rev:0)?b:a);
+      const minOpmHq=vals.reduce((a,b)=>(b.rev>0?b.op/b.rev:0)<(a.rev>0?a.op/a.rev:0)?b:a);
+      const kpiAvg=ch.kpiKey?K.map(k=>k[ch.kpiKey]?.t||0).reduce((a,b)=>a+b,0)/K.length:null;
+
+      h+=`<h3 style="border-left:4px solid ${ch.color};padding-left:10px">${ch.nm} 채널 본부 비교</h3>`;
+      h+=`<table><thead><tr><th>본부</th><th class="num">매출(백만)</th><th class="num">영업이익</th><th class="num">영업이익률</th>${ch.kpiKey?'<th class="num">KPI득점</th>':''}</tr></thead><tbody>`;
+      
+      [...vals].sort((a,b)=>(b.rev>0?b.op/b.rev:0)-(a.rev>0?a.op/a.rev:0)).forEach((v,rank)=>{
+        const opmV=v.rev>0?v.op/v.rev:0;
+        const kpiV=ch.kpiKey?K.find(k=>k.hq===v.hq)?.[ch.kpiKey]?.t:null;
+        const isBest=v.hq===maxOpmHq.hq, isWorst=v.hq===minOpmHq.hq;
+        h+=`<tr style="${isBest?'background:#f0fdf4':isWorst?'background:#fef2f2':''}">
+          <td>${rank+1}. <b>${v.hq}</b>${isBest?' 🏆':isWorst?' ⚠️':''}</td>
+          <td class="num">${fMn(v.rev)}</td>
+          <td class="num ${v.op>0?'pos':'neg'}" style="font-weight:700">${fMn(v.op)}</td>
+          <td class="num ${opmV>0.05?'pos':'neg'}" style="font-weight:700">${(opmV*100).toFixed(1)}%</td>
+          ${ch.kpiKey?`<td class="num"><span style="font-weight:700;color:${kpiV>=90?'#059669':kpiV>=80?'#d97706':'#dc2626'}">${kpiV?kpiV.toFixed(1):'-'}</span></td>`:''}
+        </tr>`;
+      });
+      h+=`</tbody></table>`;
+      if(ch.kpiKey){
+        h+=`<div class="insight">📌 ${ch.nm}: 1위 <b>${maxOpmHq.hq}</b>(${maxOpmHq.rev>0?(maxOpmHq.op/maxOpmHq.rev*100).toFixed(1):0}%) vs 최하 <b>${minOpmHq.hq}</b>(${minOpmHq.rev>0?(minOpmHq.op/minOpmHq.rev*100).toFixed(1):0}%) · KPI 평균 ${kpiAvg?kpiAvg.toFixed(1):'-'}점</div>`;
+      }
+    });
+
+    // 6. 전략 권고
+    const lowestHq=sortedHq[sortedHq.length-1];
+    const lowestOp=(lowestHq.gp-lowestHq.sga)/lowestHq.rev;
+    h+=`<h2>Ⅵ. 전략적 권고사항</h2>
+    <div class="action">
+      <b>① [즉시] ${lowestHq.nm} 수익성 개선 TF 구성</b><br>
+      영업이익률 ${(lowestOp*100).toFixed(1)}% — 판관비율 ${(lowestHq.sga/lowestHq.rev*100).toFixed(1)}% 구조적 재검토, 채널별 비용 적정성 점검<br><br>
+      <b>② [단기] 소상공인 채널 본부간 격차 해소</b><br>
+      1위 강서본부 노하우 이식 — 하위 강남본부 전담 지원 TF 운영, 커버리지 52→65% 3개월 목표<br><br>
+      <b>③ [정기] 본부×채널 월간 수익성 모니터링</b><br>
+      각 본부의 채널별 영업이익률 매월 추적, KPI 득점과의 상관관계 분석 정례화<br><br>
+      <b>④ [중기] 채널 포트폴리오 최적화</b><br>
+      도매 채널 수익성(전사 ${(P.op.wholesale/P.revenue.wholesale*100).toFixed(1)}%)이 소매(${(P.op.retail/P.revenue.retail*100).toFixed(1)}%)보다 낮은 본부 집중 점검 — 비용구조 재설계
+    </div>`;
+
+    h+=`<p style="margin-top:20px;font-size:10px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px">
+      ⚠️ 본 보고서의 채널별 본부 손익은 KPI 득점 비율 기반 추정치입니다. 채널 실적 마감 데이터 기준으로 업데이트 필요.
+    </p>`;
+    h+=`</div></body></html>`;
+    openReport(h,'본부별 채널 교차 손익 분석');
+
+  } else if(type==='channel'){
+    let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>채널별 손익 분석</title>${RS}</head><body><div class="page">`;
+    h+=`<h1>📊 채널별 손익 분석 보고서</h1><p style="color:#64748b;font-size:11px;margin-bottom:16px">${D.period} 기준</p>`;
+    CHS.forEach(c=>{
+      const opm=(P.op[c]/P.revenue[c]*100);
+      h+=`<h2>${CN[c]} 채널</h2>
+      <div class="${opm>10?'action':opm>5?'insight':opm>0?'insight':'warn'}">
+      매출 ${fBn(P.revenue[c])}억(비중 ${(P.revenue[c]/P.revenue.total*100).toFixed(1)}%) | 총이익률 ${(P.gross[c]/P.revenue[c]*100).toFixed(1)}% | 영업이익 <strong>${fBn(P.op[c])}억(${opm.toFixed(1)}%)</strong>
+      </div>`;
+    });
+    h+=`</div></body></html>`;
+    openReport(h,'채널별 손익 분석');
+  }
+}
+
+
+
+function genTaskReport(){
+  const T=D.tasks,total=T.length,done=T.filter(t=>t.st==='완료').length,prog=T.filter(t=>t.st==='진행중').length;
+  const core=T.filter(t=>t.co==='●'),zero=T.filter(t=>t.pp===0&&t.st==='진행중');
+  const tms={};T.forEach(t=>{if(!tms[t.tm])tms[t.tm]={total:0,done:0,avg:0};tms[t.tm].total++;if(t.st==='완료')tms[t.tm].done++;tms[t.tm].avg+=t.pp;});
+  Object.keys(tms).forEach(k=>tms[k].avg=tms[k].avg/tms[k].total);
+  const sorted=Object.entries(tms).sort((a,b)=>b[1].avg-a[1].avg);
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>과제관리보고서</title>${rptStyle()}</head><body><div class="page">
+  <h1>📋 KT M&S 전사 과제 관리 보고서</h1><p style="color:#64748b;font-size:11px;margin-bottom:16px">${D.period} 기준 · 경영기획팀</p>
+  <div class="exec-box">전체 <b>${total}개</b> 과제 · 완료 <b>${done}개</b>(${(done/total*100).toFixed(1)}%) · 진행중 <b>${prog}개</b> · 핵심과제 ${core.length}개</div>
+  <div class="warn">⚠️ 진행중 + 추진도 0% 과제 <b>${zero.length}건</b> — 즉시 점검 필요</div>
+  <h2>팀별 현황</h2><table><thead><tr><th>팀명</th><th class="num">과제수</th><th class="num">완료</th><th>평균추진도</th></tr></thead><tbody>`;
+  sorted.forEach(([k,v])=>{h+=`<tr><td>${k}</td><td style="text-align:center">${v.total}</td><td style="text-align:center">${v.done}</td><td style="text-align:right;font-weight:600" class="${v.avg>.3?'pos':'neg'}">${(v.avg*100).toFixed(0)}%</td></tr>`;});
+  h+=`</tbody></table>
+  <h2>핵심과제 현황</h2><table><thead><tr><th>팀</th><th>과제명</th><th>담당자</th><th>추진도</th></tr></thead><tbody>`;
+  core.forEach(t=>{h+=`<tr><td>${t.tm}</td><td>${t.nm}</td><td>${t.mg||''}</td><td class="${t.pp>.3?'pos':'neg'}" style="text-align:right">${(t.pp*100).toFixed(0)}%</td></tr>`;});
+  h+=`</tbody></table>
+  <div class="action">① 추진도 0% 과제 담당자 면담 및 장애요인 파악<br>② 핵심과제 15% 미만 주간 점검 체계 도입</div>
+  </div></body></html>`;
+  openReport(h,'과제 관리 보고서');
+}
+
+// ==================== KPI REPORT ====================
+// ==================== 총괄별 과제 심층 분석 보고서 ====================
+function genTaskHqReport(){
+  const T=D.tasks;
+  const RS=rptStyle();
+
+  // 채널-팀 매핑
+  const TM_CHANNEL={
+    '소매강화팀':'소매','디지털강화팀':'디지털','도매강화팀':'도매',
+    '소상공인혁신팀':'소상공인','법인영업팀':'기업/공공','기업영업팀':'기업/공공',
+    '현장지원팀':'영업지원','영업기획팀':'영업지원','영업품질팀':'영업지원','역량강화팀':'영업지원',
+    '경영기획팀':'경영지원','회계세무팀':'경영지원','인사팀':'경영지원','경영지원팀':'경영지원',
+    'IT보안팀':'IT/디지털','AI확산팀':'IT/디지털','플랫폼사업1팀':'플랫폼','플랫폼사업2팀':'플랫폼','모바일파트':'플랫폼'
+  };
+
+  // 총괄별 데이터 집계
+  const chs=['경총','영총'];
+  const chData={};
+  chs.forEach(c=>{
+    const tasks=T.filter(t=>t.ch===c);
+    const teams=[...new Set(tasks.map(t=>t.tm))];
+    const done=tasks.filter(t=>t.st==='완료');
+    const prog=tasks.filter(t=>t.st==='진행중');
+    const plan=tasks.filter(t=>t.st==='계획');
+    const core=tasks.filter(t=>t.co==='●');
+    const zero=tasks.filter(t=>t.st==='진행중'&&t.pp===0);
+    const low=tasks.filter(t=>t.st==='진행중'&&t.pp>0&&t.pp<=0.15);
+    const avgPp=tasks.reduce((s,t)=>s+t.pp,0)/tasks.length;
+    const coreAvgPp=core.length?core.reduce((s,t)=>s+t.pp,0)/core.length:0;
+    chData[c]={tasks,teams,done,prog,plan,core,zero,low,avgPp,coreAvgPp};
+  });
+
+  // 팀별 데이터
+  const allTeams=[...new Set(T.map(t=>t.tm))].sort();
+  const teamData={};
+  allTeams.forEach(tm=>{
+    const tasks=T.filter(t=>t.tm===tm);
+    const ch=tasks[0]?.ch||'';
+    const done=tasks.filter(t=>t.st==='완료').length;
+    const prog=tasks.filter(t=>t.st==='진행중').length;
+    const core=tasks.filter(t=>t.co==='●').length;
+    const avg=tasks.reduce((s,t)=>s+t.pp,0)/tasks.length;
+    const zero=tasks.filter(t=>t.st==='진행중'&&t.pp===0).length;
+    const channel=TM_CHANNEL[tm]||'기타';
+    teamData[tm]={tasks,ch,done,prog,core,avg,zero,channel};
+  });
+
+  const fPct=v=>Math.round(v*100)+'%';
+  const clr=v=>v>=0.7?'#059669':v>=0.4?'#d97706':'#dc2626';
+  const bar=(v,w=120)=>`<div style="width:${w}px;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px"><div style="width:${Math.round(v*100)}%;height:100%;background:${clr(v)};border-radius:5px"></div></div>`;
+
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>총괄별 과제 심층 분석</title>${RS}</head><body>
+  <div class="cover">
+    <div class="cover-tag">Confidential · 총괄별 과제 심층 분석 보고서</div>
+    <div class="cover-title">총괄별 사업과제<br>심층 이행 분석</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 전체 ${T.length}개 과제</div>
+    <div style="display:flex;gap:16px;margin-top:20px;flex-wrap:wrap">
+      ${chs.map(c=>{const d=chData[c];return `<div style="flex:1;min-width:200px;background:rgba(255,255,255,.08);border-radius:12px;padding:16px">
+        <div style="font-size:12px;color:rgba(255,255,255,.6);font-weight:600;margin-bottom:4px">${c}</div>
+        <div style="font-size:32px;font-weight:900;color:#fff">${d.tasks.length}개</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.6)">${d.teams.length}개 팀 | 핵심 ${d.core.length}개 | 평균추진도 ${fPct(d.avgPp)}</div>
+      </div>`}).join('')}
+    </div>
+  </div>`;
+
+  // 경총/영총 각각 상세 분석
+  chs.forEach(c=>{
+    const d=chData[c];
+    const cTeams=allTeams.filter(t=>teamData[t].ch===c).sort((a,b)=>teamData[b].avg-teamData[a].avg);
+
+    h+=`<h2>${c} — ${d.tasks.length}개 과제 ${c==='경총'?'(경영·지원 기능)':'(영업·현장 기능)'}</h2>`;
+
+    // Executive Summary Box
+    h+=`<div class="exec-box">
+      총 <b>${d.tasks.length}개</b> 과제 중 완료 <b style="color:#059669">${d.done.length}개</b>(${(d.done.length/d.tasks.length*100).toFixed(0)}%) · 진행중 <b style="color:#d97706">${d.prog.length}개</b> · 계획 ${d.plan.length}개 · 핵심과제 추진도 평균 <b>${fPct(d.coreAvgPp)}</b>
+    </div>`;
+
+    if(d.zero.length>0||d.low.length>0){
+      h+=`<div class="warn">⚠️ 리스크 과제: 진행중 추진도 0% ${d.zero.length}개 · 15% 이하 ${d.low.length}개 → 즉시 점검 필요</div>`;
+    }
+
+    // 팀별 현황 테이블
+    h+=`<h3>팀별 과제 현황</h3><table><thead><tr><th>팀명</th><th>채널연계</th><th class="num">과제</th><th class="num">완료</th><th class="num">핵심</th><th class="num">평균추진도</th><th class="num">⚠️리스크</th></tr></thead><tbody>`;
+    cTeams.forEach(tm=>{
+      const d2=teamData[tm];
+      h+=`<tr><td><b>${tm}</b></td><td><span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af">${d2.channel}</span></td>
+      <td class="num">${d2.tasks.length}</td><td class="num">${d2.done}</td><td class="num">${d2.core?`<span style="color:#dc2626;font-weight:700">${d2.core}</span>`:'—'}</td>
+      <td class="num"><span style="font-weight:700;color:${clr(d2.avg)}">${fPct(d2.avg)}</span>${bar(d2.avg)}</td>
+      <td class="num">${d2.zero?`<span style="color:#dc2626;font-weight:700">${d2.zero}개</span>`:'—'}</td></tr>`;
+    });
+    h+=`</tbody></table>`;
+
+    // 핵심 과제 현황
+    const coreList=d.core.sort((a,b)=>a.pp-b.pp);
+    h+=`<h3>핵심 과제 추진 현황 (${coreList.length}개)</h3><table><thead><tr><th>팀</th><th>과제명</th><th>담당자</th><th class="num">추진도</th><th>상태</th></tr></thead><tbody>`;
+    coreList.forEach(t=>{
+      h+=`<tr><td>${t.tm}</td><td>${t.nm}</td><td style="color:#64748b;font-size:11px">${t.mg}</td>
+      <td class="num"><b style="color:${clr(t.pp)}">${fPct(t.pp)}</b>${bar(t.pp,80)}</td>
+      <td><span class="pill pill-${t.st==='완료'?'g':t.st==='진행중'?'y':'b'}">${t.st}</span></td></tr>`;
+    });
+    h+=`</tbody></table>`;
+
+    // 리스크 과제
+    const risk=[...d.zero,...d.low.filter(t=>!d.zero.includes(t))];
+    if(risk.length){
+      h+=`<h3>⚠️ 리스크 과제 (진행중·추진도≤15%)</h3><table><thead><tr><th>팀</th><th>과제명</th><th>담당자</th><th class="num">추진도</th></tr></thead><tbody>`;
+      risk.forEach(t=>{h+=`<tr><td>${t.tm}</td><td>${t.nm}</td><td style="color:#64748b;font-size:11px">${t.mg}</td><td class="num"><b style="color:#dc2626">${fPct(t.pp)}</b></td></tr>`;});
+      h+=`</tbody></table>`;
+    }
+  });
+
+  // 전사 액션 권고
+  const totalZero=T.filter(t=>t.st==='진행중'&&t.pp===0);
+  const totalLow=T.filter(t=>t.st==='진행중'&&t.pp>0&&t.pp<=0.15);
+  h+=`<h2>전사 액션 권고</h2>
+  <div class="action">
+    <b>① [즉시] 추진도 0% 과제 ${totalZero.length}개 집중 점검</b><br>
+    경총 ${totalZero.filter(t=>t.ch==='경총').length}개 / 영총 ${totalZero.filter(t=>t.ch==='영총').length}개 — 2주 내 장애요인 파악 및 실행계획 재수립<br><br>
+    <b>② [단기] 핵심과제 주간 이행 체크 시스템 도입</b><br>
+    핵심 과제 ${T.filter(t=>t.co==='●').length}개 별도 주간 점검 보고 체계 운영<br><br>
+    <b>③ [정기] 팀별 추진도 하위 3팀 집중 지원</b><br>
+    ${allTeams.sort((a,b)=>teamData[a].avg-teamData[b].avg).slice(0,3).map(t=>`${t}(${fPct(teamData[t].avg)})`).join(', ')} — 상위 팀 노하우 이식 및 리소스 지원
+  </div>
+  </div></body></html>`;
+  openReport(h,'총괄별 과제 심층 분석 보고서');
+}
+
+// ==================== 채널별 과제 연계 분석 보고서 ====================
+function genTaskChannelReport(){
+  const T=D.tasks, P=D.profit, K=D.kpi;
+
+  // 팀→채널 매핑 (채널 영업과 연계)
+  const TM_CHANNEL={
+    '소매강화팀':{ch:'소매',kpi:'rt',color:'#38bdf8'},
+    '디지털강화팀':{ch:'디지털',kpi:null,color:'#a78bfa'},
+    '도매강화팀':{ch:'도매',kpi:'wh',color:'#34d399'},
+    '소상공인혁신팀':{ch:'소상공인',kpi:'sm',color:'#818cf8'},
+    '법인영업팀':{ch:'기업/공공',kpi:null,color:'#fb923c'},
+    '기업영업팀':{ch:'기업/공공',kpi:null,color:'#fb923c'},
+    '현장지원팀':{ch:'영업지원',kpi:null,color:'#fbbf24'},
+    '영업기획팀':{ch:'영업지원',kpi:null,color:'#fbbf24'},
+    '영업품질팀':{ch:'영업품질',kpi:null,color:'#f87171'},
+    '역량강화팀':{ch:'역량강화',kpi:null,color:'#e879f9'},
+    '경영기획팀':{ch:'경영지원',kpi:null,color:'#94a3b8'},
+    '회계세무팀':{ch:'경영지원',kpi:null,color:'#94a3b8'},
+    '인사팀':{ch:'경영지원',kpi:null,color:'#94a3b8'},
+    '경영지원팀':{ch:'경영지원',kpi:null,color:'#94a3b8'},
+    'IT보안팀':{ch:'IT/보안',kpi:null,color:'#38bdf8'},
+    'AI확산팀':{ch:'AI/혁신',kpi:null,color:'#7c3aed'},
+    '플랫폼사업1팀':{ch:'플랫폼',kpi:null,color:'#0891b2'},
+    '플랫폼사업2팀':{ch:'플랫폼',kpi:null,color:'#0891b2'},
+    '모바일파트':{ch:'플랫폼',kpi:null,color:'#0891b2'}
+  };
+
+  // 채널별 집계
+  const channelMap={};
+  T.forEach(t=>{
+    const info=TM_CHANNEL[t.tm]||{ch:'기타',color:'#94a3b8'};
+    const c=info.ch;
+    if(!channelMap[c]) channelMap[c]={label:c,color:info.color,kpiKey:info.kpi,tasks:[],teams:new Set()};
+    channelMap[c].tasks.push(t);
+    channelMap[c].teams.add(t.tm);
+  });
+
+  const channels=Object.values(channelMap).sort((a,b)=>b.tasks.length-a.tasks.length);
+
+  const fPct=v=>Math.round(v*100)+'%';
+  const clr=v=>v>=0.7?'#059669':v>=0.4?'#d97706':'#dc2626';
+  const bar=(v,w=100,c)=>`<div style="width:${w}px;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:4px"><div style="width:${Math.round(v*100)}%;height:100%;background:${c||clr(v)};border-radius:4px"></div></div>`;
+  const RS=rptStyle();
+
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>채널별 과제 연계 분석</title>${RS}</head><body>
+  <div class="cover">
+    <div class="cover-tag">Confidential · 채널별 과제×성과 연계 분석</div>
+    <div class="cover-title">채널별 사업과제<br>성과 연계 분석 보고서</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 과제×KPI×손익 통합 분석</div>
+  </div>
+
+  <div class="exec-box">
+    본 보고서는 팀별 사업과제를 비즈니스 채널에 매핑하여, <b>과제 추진도 ↔ KPI ↔ 손익</b>의 3자 연계를 분석합니다.<br>
+    채널 전략과 실행 과제의 정합성을 검증하고, 과제 추진 지체가 실적에 미치는 영향을 진단합니다.
+  </div>`;
+
+  // 채널별 요약 테이블
+  h+=`<h2>1. 채널별 과제 현황 종합</h2><table><thead>
+    <tr><th>채널</th><th class="num">과제</th><th class="num">완료</th><th class="num">진행중</th><th class="num">리스크</th><th class="num">평균추진도</th><th>연계KPI</th><th>영업이익(백만)</th></tr>
+  </thead><tbody>`;
+
+  channels.forEach(ch=>{
+    const done=ch.tasks.filter(t=>t.st==='완료').length;
+    const prog=ch.tasks.filter(t=>t.st==='진행중').length;
+    const risk=ch.tasks.filter(t=>t.st==='진행중'&&t.pp<=0.15).length;
+    const avg=ch.tasks.reduce((s,t)=>s+t.pp,0)/ch.tasks.length;
+    const kpiVal=ch.kpiKey ? (() => {const avgs=K.map(k=>k[ch.kpiKey]?.t||0);return (avgs.reduce((a,b)=>a+b,0)/avgs.length).toFixed(1)+'점';})() : '—';
+    const profitKey={소매:'retail',도매:'wholesale',디지털:'digital',소상공인:'small_biz','기업/공공':'enterprise'}[ch.label];
+    const profitVal=profitKey ? `${Math.round(P.op[profitKey]/1e6).toLocaleString()}` : '—';
+    const profitClr=profitKey && P.op[profitKey]>0?'#059669':'#dc2626';
+    h+=`<tr>
+      <td><span style="display:inline-block;width:10px;height:10px;background:${ch.color};border-radius:50%;margin-right:6px"></span><b>${ch.label}</b><br><span style="font-size:10px;color:#64748b">${[...ch.teams].join(', ')}</span></td>
+      <td class="num">${ch.tasks.length}</td><td class="num">${done}</td><td class="num">${prog}</td>
+      <td class="num">${risk?`<span style="color:#dc2626;font-weight:700">${risk}⚠️</span>`:'—'}</td>
+      <td class="num"><b style="color:${clr(avg)}">${fPct(avg)}</b>${bar(avg,80,ch.color)}</td>
+      <td class="num">${kpiVal}</td>
+      <td class="num" style="font-weight:700;color:${profitClr}">${profitVal!=='—'?profitVal+'M':'—'}</td>
+    </tr>`;
+  });
+  h+=`</tbody></table>`;
+
+  // KPI 연계 채널 심층 분석 (소매/도매/소상공인)
+  const kpiChannels=[
+    {label:'소매',taskCh:'소매',kpiKey:'rt',profitKey:'retail',color:'#38bdf8',tmName:'소매강화팀'},
+    {label:'도매',taskCh:'도매',kpiKey:'wh',profitKey:'wholesale',color:'#34d399',tmName:'도매강화팀'},
+    {label:'소상공인',taskCh:'소상공인',kpiKey:'sm',profitKey:'small_biz',color:'#818cf8',tmName:'소상공인혁신팀'}
+  ];
+
+  h+=`<h2>2. 핵심 영업 채널 — 과제×KPI×손익 상관 분석</h2>`;
+
+  kpiChannels.forEach(kc=>{
+    const chTasks=channelMap[kc.taskCh]?.tasks||[];
+    const done=chTasks.filter(t=>t.st==='완료').length;
+    const avg=chTasks.length?chTasks.reduce((s,t)=>s+t.pp,0)/chTasks.length:0;
+    const kpiAvg=K.map(k=>k[kc.kpiKey]?.t||0).reduce((a,b)=>a+b,0)/K.length;
+    const kpiVar=Math.max(...K.map(k=>k[kc.kpiKey]?.t||0))-Math.min(...K.map(k=>k[kc.kpiKey]?.t||0));
+    const op=P.op[kc.profitKey];
+    const opm=(op/P.revenue[kc.profitKey]*100).toFixed(1);
+    const risk=chTasks.filter(t=>t.st==='진행중'&&t.pp<=0.15);
+
+    h+=`<h3 style="border-left:4px solid ${kc.color};padding-left:10px">${kc.label} 채널 — ${kc.tmName}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:4px">과제 평균 추진도</div>
+        <div style="font-size:24px;font-weight:900;color:${clr(avg)}">${fPct(avg)}</div>
+        <div style="font-size:10px;color:#64748b">${chTasks.length}개 중 완료 ${done}개</div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:4px">KPI 평균 득점</div>
+        <div style="font-size:24px;font-weight:900;color:${kc.color}">${kpiAvg.toFixed(1)}점</div>
+        <div style="font-size:10px;color:#64748b">본부간 편차 ${kpiVar.toFixed(1)}p</div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:4px">영업이익률</div>
+        <div style="font-size:24px;font-weight:900;color:${op>0?'#059669':'#dc2626'}">${opm}%</div>
+        <div style="font-size:10px;color:#64748b">${Math.round(op/1e8).toFixed(1)}억원</div>
+      </div>
+    </div>`;
+
+    // 과제 추진도 vs KPI 인사이트
+    const insight=avg>=0.6&&kpiAvg>=80?`과제 추진도(${fPct(avg)})와 KPI(${kpiAvg.toFixed(1)}점) 모두 양호 — 전략 실행력이 성과로 연결되고 있음`:
+      avg<0.4&&kpiAvg<80?`⚠️ 과제 추진도(${fPct(avg)}) 저조 → KPI(${kpiAvg.toFixed(1)}점) 부진 상관 관계 — 과제 실행력 제고가 핵심 과제`:
+      avg>=0.5&&kpiAvg<80?`과제는 추진중(${fPct(avg)})이나 KPI 성과 미흡(${kpiAvg.toFixed(1)}점) — 과제 내용과 KPI 지표 정합성 재검토 필요`:
+      `과제 초기 단계(${fPct(avg)}) — 향후 KPI 영향 모니터링 필요`;
+
+    h+=`<div class="insight">📌 ${kc.label} 채널 진단: ${insight}</div>`;
+
+    // 채널 주요 과제 목록
+    if(chTasks.length){
+      h+=`<table><thead><tr><th>과제명</th><th>담당자</th><th class="num">추진도</th><th>상태</th></tr></thead><tbody>`;
+      chTasks.sort((a,b)=>b.co.localeCompare(a.co)||b.pp-a.pp).forEach(t=>{
+        h+=`<tr><td>${t.co?'<span style="color:#dc2626">● </span>':''}${t.nm}</td><td style="color:#64748b;font-size:11px">${t.mg}</td>
+        <td class="num"><b style="color:${clr(t.pp)}">${fPct(t.pp)}</b></td>
+        <td><span class="pill pill-${t.st==='완료'?'g':t.st==='진행중'?'y':'b'}">${t.st}</span></td></tr>`;
+      });
+      h+=`</tbody></table>`;
+    }
+
+    if(risk.length){
+      h+=`<div class="warn">⚠️ ${kc.label} 채널 리스크: 추진도 15% 이하 과제 ${risk.length}개 — ${risk.map(t=>t.nm.slice(0,15)).join(', ')}</div>`;
+    }
+  });
+
+  // 경영지원·IT·AI 채널 (비KPI 연계)
+  h+=`<h2>3. 지원 기능 채널 — 실행 현황</h2>`;
+  const supportChannels=['경영지원','AI/혁신','IT/보안','영업지원','영업품질','역량강화','플랫폼'];
+  supportChannels.forEach(sc=>{
+    const ch=channelMap[sc];
+    if(!ch) return;
+    const avg=ch.tasks.reduce((s,t)=>s+t.pp,0)/ch.tasks.length;
+    const done=ch.tasks.filter(t=>t.st==='완료').length;
+    const core=ch.tasks.filter(t=>t.co==='●');
+    h+=`<div style="margin-bottom:12px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b style="font-size:13px">${sc}</b>
+        <span style="font-size:11px;color:#64748b">${ch.tasks.length}개 과제 · 핵심 ${core.length}개 · 완료 ${done}개</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden">
+          <div style="width:${Math.round(avg*100)}%;height:100%;background:${ch.color};border-radius:6px"></div>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:${clr(avg)};width:40px;text-align:right">${fPct(avg)}</span>
+      </div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px">${[...ch.teams].join(' · ')}</div>
+    </div>`;
+  });
+
+  // 종합 권고
+  const totalRisk=T.filter(t=>t.st==='진행중'&&t.pp<=0.15);
+  const worstCh=channels.sort((a,b)=>(a.tasks.reduce((s,t)=>s+t.pp,0)/a.tasks.length)-(b.tasks.reduce((s,t)=>s+t.pp,0)/b.tasks.length))[0];
+  h+=`<h2>4. 전략적 권고사항</h2>
+  <div class="action">
+    <b>① [최우선] ${worstCh.label} 채널 과제 집중 관리</b><br>
+    평균 추진도 ${fPct(worstCh.tasks.reduce((s,t)=>s+t.pp,0)/worstCh.tasks.length)} — 채널 담당 임원 직접 점검 체계 구축<br><br>
+    <b>② [즉시] 전체 리스크 과제 ${totalRisk.length}개 액션플랜 재수립</b><br>
+    진행중 15% 이하 과제 담당자 1:1 면담, 2주 내 장애요인 해소 방안 확정<br><br>
+    <b>③ [정기] 채널×KPI 연계 월간 이행 점검 체계 수립</b><br>
+    소매/도매/소상공인 과제 추진도와 KPI 득점 상관관계 월별 모니터링 보고 체계화<br><br>
+    <b>④ [중기] 과제 KPI 연계 평가 체계 도입</b><br>
+    사업과제 목표와 본부 KPI 지표를 명시적으로 연동하여 과제 완료 시 KPI 득점 자동 반영 체계 설계
+  </div>
+  </div></body></html>`;
+  openReport(h,'채널별 과제 연계 분석 보고서');
+}
+
+
+function genKpiVarianceReport(){
+  const K=D.kpi,V=D.variance,RD=D.kpi_retail_detail||{},WD=D.kpi_wholesale_detail||{},SMD=D.kpi_smb_detail||{};
+  const HQS=['강서본부','동부본부','서부본부','강북본부','강남본부'];
+  const varRt=Math.max(...K.map(k=>k.rt.t))-Math.min(...K.map(k=>k.rt.t));
+  const varWh=Math.max(...K.map(k=>k.wh.t))-Math.min(...K.map(k=>k.wh.t));
+  const varSm=Math.max(...K.map(k=>k.sm.t))-Math.min(...K.map(k=>k.sm.t));
+  const K1=K[0],K5=K[4];
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>KPI 편차 원인 분석</title>${rptStyle()}</head><body>
+  <div class="cover"><div class="cover-tag">Confidential · KPI Variance Analysis</div>
+  <div class="cover-title">KPI 편차 원인 분석 보고서</div>
+  <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 5개 본부 × 3채널 교차 분석</div>
+  <div class="cover-kpis">
+    <div class="cover-kpi"><div class="cover-kpi-v" style="color:#f87171">${varSm.toFixed(1)}p</div><div class="cover-kpi-l">소상공인 최대편차</div></div>
+    <div class="cover-kpi"><div class="cover-kpi-v" style="color:#fbbf24">${varWh.toFixed(1)}p</div><div class="cover-kpi-l">도매 편차</div></div>
+    <div class="cover-kpi"><div class="cover-kpi-v" style="color:#34d399">${varRt.toFixed(1)}p</div><div class="cover-kpi-l">소매 편차</div></div>
+  </div></div>
+
+  <h1>Ⅰ. Executive Summary</h1>
+  <div class="exec-box">
+    <b>종합 진단</b>: ${D.period} 기준 5개 본부 KPI 편차는 소상공인(${varSm.toFixed(1)}p) > 도매(${varWh.toFixed(1)}p) > 소매(${varRt.toFixed(1)}p) 순으로 소상공인 채널의 본부간 격차가 구조적으로 가장 심각함.<br><br>
+    1위 <b>${K1.hq}</b>(${K1.ts.toFixed(1)}점)와 5위 <b>${K5.hq}</b>(${K5.ts.toFixed(1)}점)의 격차는 <b>${(K1.ts-K5.ts).toFixed(1)}점</b>이며, 채널별로는 소상공인(${(K1.sm.t-K5.sm.t).toFixed(1)}p) > 도매(${(K1.wh.t-K5.wh.t).toFixed(1)}p) > 소매(${(K1.rt.t-K5.rt.t).toFixed(1)}p) 순.
+  </div>
+  <div class="warn">⚠️ 강남본부 소상공인(49.01점)은 1위 강서(71.95점) 대비 22.9p 격차 — 즉시 집중 지원 필요</div>
+  <div class="warn">⚠️ 서부본부 도매(88.35점)는 전 항목 최하위 — 대리점 인프라 구조 점검 필요</div>
+
+  <h1>Ⅱ. 채널별 편차 분석</h1>
+
+  <h2>① 소매 채널 (가중치 60%)</h2>
+  <table><thead><tr><th>본부</th><th class="num">종합</th><th class="num">후불</th><th class="num">MNP</th><th class="num">유선</th><th class="num">R-VOC</th><th class="num">TCSI</th><th class="num">매장이익</th></tr></thead><tbody>
+  ${HQS.map(hq=>{const k=K.find(x=>x.hq===hq)||{};const d=RD[hq]||{};const isTop=k.rk===1,isBot=k.rk===5;
+  return `<tr style="${isTop?'background:#e6fdf5':''}${isBot?'background:#fff7ed':''}">
+    <td style="font-weight:700">${hq}${isTop?' 🥇':''}${isBot?' ⚠️':''}</td>
+    <td class="num ${isTop?'pos':''}${isBot?'neg':''}" style="font-weight:700">${k.rt?.t?.toFixed(1)||'-'}</td>
+    <td class="num">${d.hubul?.toFixed(1)||'-'}</td>
+    <td class="num ${d.mnp>8?'pos':d.mnp<7?'neg':''}">${d.mnp?.toFixed(1)||'-'}</td>
+    <td class="num">${d.wired?.toFixed(1)||'-'}</td>
+    <td class="num ${d.rvoc>4?'pos':d.rvoc<2.5?'neg':''}">${d.rvoc?.toFixed(2)||'-'}</td>
+    <td class="num">${d.tcsi?.toFixed(1)||'-'}</td>
+    <td class="num">${d.store_profit?.toFixed(1)||'-'}</td>
+  </tr>`}).join('')}
+  </tbody></table>
+  <div class="insight"><b>소매 편차 원인 분석</b><br>
+  • MNP 격차(${(K.find(k=>k.hq==='동부본부')?.rt.s||63.8).toFixed(1)} vs ${(K.find(k=>k.hq==='강남본부')?.rt.s||62.4).toFixed(1)})는 번호이동 캠페인 실행력 차이에서 기인 — 동부 9.2점 vs 강남 6.9점(격차 2.3p)<br>
+  • 소매 편차(${varRt.toFixed(1)}p)가 상대적으로 작은 것은 본사 정책·인센 통일성 덕분 → 개인별 역량 차이가 주 변수<br>
+  • R-VOC 강서(2.31) vs 동부(4.19) — 고객불만 관리 우수 동부본부의 후불 실적 연계 확인 필요
+  </div>
+
+  <h2>② 도매 채널 (가중치 30%)</h2>
+  <table><thead><tr><th>본부</th><th class="num">종합</th><th class="num">신규가입</th><th class="num">이익</th><th class="num">대리점수</th><th class="num">엣지비율%</th></tr></thead><tbody>
+  ${HQS.map(hq=>{const k=K.find(x=>x.hq===hq)||{};const d=WD[hq]||{};const isBot=hq==='서부본부';
+  return `<tr style="${isBot?'background:#fff7ed':''}">
+    <td style="font-weight:700">${hq}${isBot?' ⚠️':''}</td>
+    <td class="num ${k.wh?.t>94?'pos':k.wh?.t<90?'neg':''}" style="font-weight:700">${k.wh?.t?.toFixed(1)||'-'}</td>
+    <td class="num">${k.wh?.s?.toFixed(1)||'-'}</td>
+    <td class="num">${k.wh?.p?.toFixed(1)||'-'}</td>
+    <td class="num">${d.dealer_cnt||'-'}</td>
+    <td class="num ${d.edge_rt>85?'pos':d.edge_rt<80?'neg':''}">${d.edge_rt?.toFixed(1)||'-'}</td>
+  </tr>`}).join('')}
+  </tbody></table>
+  <div class="insight"><b>도매 편차 원인 분석</b><br>
+  • 서부본부 도매(88.35점) 최하위 — 대리점 수(121개) 최저 + 엣지 비율(78.4%) 최저가 복합 작용<br>
+  • 강서·동부 도매 1위권(96점대) 유지 — 대리점 생산성과 엣지 P/G 이행률이 핵심 차별 요인<br>
+  • 도매 이익은 강남(6.0점)·서부(6.0점)가 높음 → 신규 부진해도 이익 관리 우수 — 포트폴리오 전략의 차이
+  </div>
+
+  <h2>③ 소상공인 채널 (가중치 10% · 최대 편차 채널)</h2>
+  <table><thead><tr><th>본부</th><th class="num">종합</th><th class="num">영업</th><th class="num">이익</th><th class="num">프랜차이즈수</th><th class="num">커버리지%</th></tr></thead><tbody>
+  ${HQS.map(hq=>{const k=K.find(x=>x.hq===hq)||{};const d=SMD[hq]||{};const isTop=hq==='강서본부',isBot=hq==='강남본부';
+  return `<tr style="${isTop?'background:#e6fdf5':''}${isBot?'background:#fff7ed':''}">
+    <td style="font-weight:700">${hq}${isTop?' 🥇':''}${isBot?' ⚠️':''}</td>
+    <td class="num ${k.sm?.t>65?'pos':k.sm?.t<55?'neg':''}" style="font-weight:700">${k.sm?.t?.toFixed(1)||'-'}</td>
+    <td class="num">${k.sm?.s?.toFixed(1)||'-'}</td>
+    <td class="num">${k.sm?.p?.toFixed(2)||'-'}</td>
+    <td class="num">${d.franchise_cnt||'-'}</td>
+    <td class="num ${d.coverage>70?'pos':d.coverage<60?'neg':''}">${d.coverage||'-'}</td>
+  </tr>`}).join('')}
+  </tbody></table>
+  <div class="warn">⚠️ 강남본부 소상공인 영업(29.58점) — 커버리지 52%로 전국 최저. 구조적 영업 공백 상태</div>
+  <div class="insight"><b>소상공인 편차 원인 분석</b><br>
+  • 이익 지표(19.4~20.8p)는 모든 본부에서 유사 → 영업력 차이(29.6~52.5p)가 편차의 핵심<br>
+  • 커버리지(52%→78%)와 영업 득점이 정비례 — 전담 영업인력 배치 및 프랜차이즈 계약 확대가 직접 해법<br>
+  • 강서 강점: 소상공인 전담 인력 집중 + 프랜차이즈 허브 구축 → 타 본부 벤치마킹 필수
+  </div>
+
+  <h1>Ⅲ. 구조적 원인 진단</h1>
+  <table><thead><tr><th>채널</th><th>1차 원인</th><th>2차 원인</th><th>영향도</th><th>위험등급</th></tr></thead><tbody>
+  <tr><td>소상공인 영업</td><td>전담인력 부족·커버리지 격차</td><td>본부별 전략 우선순위 차이</td><td>KPI 22.9p 격차</td><td class="neg" style="font-weight:700">HIGH 🔴</td></tr>
+  <tr><td>도매 서부본부</td><td>대리점 인프라 열위(121개)</td><td>엣지 이행 동기부여 부족</td><td>8.1p 도매 격차</td><td style="color:#f59e0b;font-weight:700">MED 🟡</td></tr>
+  <tr><td>소매 MNP</td><td>번호이동 캠페인 실행 역량</td><td>개인별 역량 편차</td><td>2.3p 격차</td><td style="color:#f59e0b;font-weight:700">MED 🟡</td></tr>
+  <tr><td>소매 R-VOC</td><td>고객 불만 처리 프로세스</td><td>매장 서비스 역량 차이</td><td>분석 필요</td><td style="color:#34d399;font-weight:700">LOW 🟢</td></tr>
+  </tbody></table>
+
+  <h1>Ⅳ. 전략적 실행 권고안</h1>
+  <div class="action">
+    <b>① [즉시 · 1개월] 강남본부 소상공인 긴급 지원 TF 구성</b><br>
+    강서본부 소상공인 우수사례 이식 — 커버리지 52%→65% 목표(+3개월), 전담인력 증원 검토<br><br>
+    <b>② [즉시 · 1개월] 서부본부 도매 구조 점검</b><br>
+    대리점 121개 → 135개 확충 목표 수립, 엣지 P/G 이행률 78.4%→85% 개선 계획 수립<br><br>
+    <b>③ [단기 · 2개월] 소매 MNP 역량 표준화</b><br>
+    동부본부(9.2점) 캠페인 방법론 전사 공유, 하위 강남·강북 집중 코칭 실시<br><br>
+    <b>④ [중기 · 3개월] 소상공인 온라인 플랫폼 연계 판매 확대</b><br>
+    과제 #119(소상공인 온라인 플랫폼) 우선 추진, 강남·동부 시범 적용 후 전사 확대
+  </div>
+  </body></html>`;
+  openReport(h,'KPI 편차 원인 분석 보고서');
+}
+
+// ==================== 본부별 KPI 액션플랜 ====================
+function genKpiActionPlanReport(){
+  const K=D.kpi,HC=D.hq_context||{},RD=D.kpi_retail_detail||{},WD=D.kpi_wholesale_detail||{},SMD=D.kpi_smb_detail||{};
+  const HQ_ORDER=['강서본부','동부본부','서부본부','강북본부','강남본부'];
+
+  // 본부별 약점 채널 자동 도출
+  const getWeak=(k)=>{
+    const ch=[{nm:'소매',v:k.rt.t},{nm:'도매',v:k.wh.t},{nm:'소상공인',v:k.sm.t}];
+    return ch.sort((a,b)=>a.v-b.v)[0].nm;
+  };
+  const getStr=(k)=>{
+    const ch=[{nm:'소매',v:k.rt.t},{nm:'도매',v:k.wh.t},{nm:'소상공인',v:k.sm.t}];
+    return ch.sort((a,b)=>b.v-a.v)[0].nm;
+  };
+
+  // 본부별 타깃 점수 (현재+2~3점)
+  const targets={'강서본부':86,'동부본부':85,'서부본부':83,'강북본부':83,'강남본부':83};
+
+  // 본부별 맞춤 액션
+  const actions={
+    '강서본부':{
+      m1:['소상공인 커버리지 52→65% (강남 TF 파견 지원)','R-VOC 관리 체계 재점검·매뉴얼 강화'],
+      m3:['소상공인 프랜차이즈 허브 모델 타 본부 이식','도매 이익구조 현행 유지 + 신규 대리점 5개 추가'],
+      monitor:['소상공인 영업 주간 점검(현 52.45점 → 목표 58점)','소매 R-VOC 월별 트렌드']
+    },
+    '동부본부':{
+      m1:['소상공인 전담인력 2명 추가 배치','동부 MNP 방법론 전사 공유 세션 개최'],
+      m3:['소상공인 커버리지 65%→72% 단계 확대','소매 후불 강점 유지: 17.8점 유지 캠페인'],
+      monitor:['소상공인 40.55→50점 월별 추이','도매 엣지 이행률 87.1% 유지']
+    },
+    '서부본부':{
+      m1:['도매 대리점 긴급 확충 계획 수립(121→130개)','엣지 P/G 이행률 78.4%→83% 단기 목표 설정'],
+      m3:['도매 전담 TF 운영(동부·강서 벤치마킹)','소상공인 강점(이익 20.78) 활용한 영업 확대'],
+      monitor:['도매 88.35→92점 분기별 점검','대리점별 엣지 이행률 주간 모니터링']
+    },
+    '강북본부':{
+      m1:['MNP 취약점(7.2점) 집중 캠페인 — 동부 방법론 적용','소상공인 커버리지 63%→68% 확대 계획'],
+      m3:['매장 이익(15.58) 강점 활용: 유선 교차판매 강화','MNP 7.2→8.0점 목표 특화 트레이닝'],
+      monitor:['소매 77.46→79점 분기 목표 관리','소상공인 영업 40.23→45점 추이']
+    },
+    '강남본부':{
+      m1:['소상공인 긴급 커버리지 확대 TF 구성(52%→60%)','소매 MNP 최하위(6.9) 집중 코칭·캠페인 실시'],
+      m3:['소상공인 온라인 플랫폼(과제#119) 강남 우선 시범','도매 이익(6.0점) 강점 유지하며 신규 비중 확대'],
+      monitor:['소상공인 29.58→38점 月 점검(최우선)','소매 MNP 6.9→7.5점 목표 추이']
+    }
+  };
+
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>본부별 KPI 액션플랜</title>${rptStyle()}</head><body>
+  <div class="cover">
+    <div class="cover-tag">Confidential · HQ Action Plan</div>
+    <div class="cover-title">본부별 KPI 개선 액션플랜</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 | 5개 본부 맞춤 실행 과제</div>
+    <div class="cover-kpis">
+      ${K.slice(0,5).map(k=>`<div class="cover-kpi"><div class="cover-kpi-v" style="color:${k.rk===1?'#34d399':k.rk<=3?'#38bdf8':'#94a3b8'}">${k.ts.toFixed(1)}</div><div class="cover-kpi-l">#${k.rk} ${k.hq}</div></div>`).join('')}
+    </div>
+  </div>
+
+  <h1>Ⅰ. 종합 현황 및 목표</h1>
+  <table><thead><tr><th>순위</th><th>본부</th><th class="num">현재 점수</th><th class="num">목표 점수</th><th class="num">개선 폭</th><th>강점 채널</th><th>약점 채널</th><th>우선 과제</th></tr></thead><tbody>`;
+
+  K.forEach(k=>{
+    const ctx=HC[k.hq]||{};const act=actions[k.hq]||{};
+    const tgt=targets[k.hq]||82;
+    h+=`<tr>
+      <td style="text-align:center;font-weight:800;color:${k.rk===1?'#fbbf24':k.rk===2?'#94a3b8':k.rk===3?'#d97706':'#64748b'}">${k.rk}</td>
+      <td style="font-weight:700">${k.hq}</td>
+      <td class="num" style="font-weight:700">${k.ts.toFixed(1)}</td>
+      <td class="num pos" style="font-weight:700">${tgt}</td>
+      <td class="num pos">+${(tgt-k.ts).toFixed(1)}p</td>
+      <td>${getStr(k)}</td>
+      <td class="neg">${getWeak(k)}</td>
+      <td style="font-size:11px">${(act.m1||[])[0]?.slice(0,20)||'-'}...</td>
+    </tr>`;
+  });
+  h+=`</tbody></table>
+  <div class="insight">5개 본부 평균 현재 ${(K.reduce((s,k)=>s+k.ts,0)/5).toFixed(1)}점 → 목표 평균 ${(Object.values(targets).reduce((a,b)=>a+b,0)/5).toFixed(0)}점으로 전체적 수준 향상 필요. 소상공인 채널 집중 관리가 핵심 레버.</div>
+
+  <h1>Ⅱ. 본부별 맞춤 액션플랜</h1>`;
+
+  HQ_ORDER.forEach(hqNm=>{
+    const k=K.find(x=>x.hq===hqNm)||{};const ctx=HC[hqNm]||{};const act=actions[hqNm]||{};
+    const tgt=targets[hqNm]||82;
+    const rd=RD[hqNm]||{},wd=WD[hqNm]||{},sd=SMD[hqNm]||{};
+    const borderClr=k.rk===1?'#fbbf24':k.rk===2?'#94a3b8':k.rk===3?'#d97706':k.rk===4?'#38bdf8':'#f87171';
+
+    h+=`<h2 style="border-left:5px solid ${borderClr};padding-left:10px">${hqNm} (현재 #${k.rk} · ${k.ts?.toFixed(1)}점 → 목표 ${tgt}점)</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0">
+      <div style="padding:10px;background:#f1f5f9;border-radius:6px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">소매 (60%)</div><div style="font-size:20px;font-weight:800;color:#0369a1">${k.rt?.t?.toFixed(1)||'-'}</div><div style="font-size:10px;color:#94a3b8">영업 ${k.rt?.s?.toFixed(1)||'-'} / 이익 ${k.rt?.p?.toFixed(1)||'-'}</div></div>
+      <div style="padding:10px;background:#f1f5f9;border-radius:6px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">도매 (30%)</div><div style="font-size:20px;font-weight:800;color:#059669">${k.wh?.t?.toFixed(1)||'-'}</div><div style="font-size:10px;color:#94a3b8">영업 ${k.wh?.s?.toFixed(1)||'-'} / 이익 ${k.wh?.p?.toFixed(1)||'-'}</div></div>
+      <div style="padding:10px;background:#f1f5f9;border-radius:6px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px">소상공인 (10%)</div><div style="font-size:20px;font-weight:800;color:#7c3aed">${k.sm?.t?.toFixed(1)||'-'}</div><div style="font-size:10px;color:#94a3b8">영업 ${k.sm?.s?.toFixed(1)||'-'} / 이익 ${k.sm?.p?.toFixed(2)||'-'}</div></div>
+    </div>
+    <div class="exec-box" style="margin-bottom:8px">
+      <b>강점</b>: ${ctx.str||'-'}<br>
+      <b>약점</b>: ${ctx.wk||'-'}<br>
+      <b>핵심 기회</b>: ${ctx.opp||'-'}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <div class="action" style="margin:0">
+        <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:6px">⚡ 즉시 실행 (1개월)</div>
+        ${(act.m1||[]).map(a=>`• ${a}`).join('<br>')}
+      </div>
+      <div class="action" style="margin:0;background:#eff6ff;border-left-color:#3b82f6">
+        <div style="font-size:11px;font-weight:700;color:#2563eb;margin-bottom:6px">📅 단기 과제 (3개월)</div>
+        ${(act.m3||[]).map(a=>`• ${a}`).join('<br>')}
+      </div>
+    </div>
+    <div style="background:#fefce8;border-left:3px solid #ca8a04;padding:10px 12px;border-radius:0 6px 6px 0;font-size:12px;margin-bottom:24px">
+      <b>📊 모니터링 지표</b>: ${(act.monitor||[]).join(' / ')}
+    </div>`;
+  });
+
+  h+=`<h1>Ⅲ. 전사 편차 축소 로드맵</h1>
+  <table><thead><tr><th>기간</th><th>핵심 과제</th><th>대상</th><th>목표</th></tr></thead><tbody>
+  <tr><td><b>1월 내</b></td><td>강남 소상공인 TF 발족 + 강서 벤치마킹</td><td>강남·경기본부</td><td>커버리지 52→58%</td></tr>
+  <tr><td><b>2월</b></td><td>서부 도매 대리점 확충 계획 확정</td><td>서부본부·도매강화팀</td><td>도매 88→91점</td></tr>
+  <tr><td><b>2월</b></td><td>전사 MNP 역량 표준화 교육</td><td>역량강화팀</td><td>하위 본부 +0.5p</td></tr>
+  <tr><td><b>3월</b></td><td>소상공인 온라인플랫폼 강남 시범 적용</td><td>소상공인혁신팀</td><td>강남 소상공 35→40점</td></tr>
+  <tr><td><b>1Q 마감</b></td><td>KPI 편차 현황 재검토 · 2Q 계획 수립</td><td>경영기획팀</td><td>전사 편차 10% 축소</td></tr>
+  </tbody></table>
+  </body></html>`;
+  openReport(h,'본부별 KPI 액션플랜 보고서');
+}
+
+// ==================== KPI 기존 보고서 ====================
+function genKpiReport(type){
+  const K=D.kpi,V=D.variance;
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>KPI분석보고서</title>${rptStyle()}</head><body><div class="page">`;
+  if(type==='detail'){
+    h+=`<h1>📊 KPI 세부지표 심층분석</h1><p style="color:#64748b;font-size:11px;margin-bottom:16px">${D.period} 기준</p>
+    <div class="exec-box">1위 <b>강서본부</b>(${K[0].ts.toFixed(1)}점) vs 5위 <b>강남본부</b>(${K[4].ts.toFixed(1)}점) · 격차 ${(K[0].ts-K[4].ts).toFixed(1)}점<br>최대편차: 소상공인영업(${V.smb_sales.toFixed(1)}p) · 최소편차: 소매이익(${V.retail_profit.toFixed(2)}p)</div>
+    <div class="warn">⚠️ 강서본부 R-VOC(0.86) 위험 · 서부본부 도매 전 항목 최하위</div>
+    <h2>소매 세부지표</h2><table><thead><tr><th>본부</th><th>합계</th><th>후불</th><th>MNP</th><th>유선</th><th>R-VOC</th><th>TCSI</th><th>매장이익</th></tr></thead><tbody>`;
+    ['동부본부','강서본부','서부본부','강남본부','강북본부'].forEach(h2=>{const d=D.kpi_retail_detail[h2]||{};h+=`<tr><td>${h2}</td><td style="font-weight:700">${d.total?.toFixed(1)}</td><td class="${d.hubul>14?'pos':''}">${d.hubul?.toFixed(1)}</td><td class="${d.mnp>7?'pos':'neg'}">${d.mnp?.toFixed(1)}</td><td>${d.wired?.toFixed(1)}</td><td class="${d.rvoc>3?'pos':'neg'}">${d.rvoc?.toFixed(2)}</td><td>${d.tcsi?.toFixed(1)}</td><td>${d.store_profit?.toFixed(1)}</td></tr>`;});
+    h+=`</tbody></table>
+    <div class="action">① R-VOC: 강서본부(0.86) → 동부본부(4.19) 벤치마킹<br>② 서부본부 도매 전담 TF 구성<br>③ 소상공인: 강남(49.01) → 강서(71.95) 격차 축소</div>`;
+  } else if(type==='summary'){
+    h+=`<h1>🎯 KPI 종합 분석</h1><p style="color:#64748b;font-size:11px;margin-bottom:16px">${D.period} 기준</p>
+    <table><thead><tr><th>순위</th><th>본부</th><th>종합</th><th>소매(60%)</th><th>도매(30%)</th><th>소상공인(10%)</th></tr></thead><tbody>`;
+    K.forEach(k=>{h+=`<tr><td style="text-align:center;font-weight:800">${k.rk}</td><td>${k.hq}</td><td style="font-weight:700">${k.ts.toFixed(1)}</td><td>${k.rt.t.toFixed(1)}</td><td>${k.wh.t.toFixed(1)}</td><td>${k.sm.t.toFixed(1)}</td></tr>`;});
+    h+=`</tbody></table>`;
+  } else {
+    h+=`<h1>🏬 지사별 KPI 분석</h1>
+    <h2>소매 지사 순위</h2><table><thead><tr><th>순위</th><th>지사</th><th>득점</th></tr></thead><tbody>`;
+    D.kpiBranch.retail.forEach(b=>{h+=`<tr><td style="text-align:center">${b.rk}</td><td>${b.nm}</td><td style="text-align:right;font-weight:700">${b.sc.toFixed(1)}</td></tr>`;});
+    h+=`</tbody></table>`;
+  }
+  h+=`</div></body></html>`;openReport(h,'KPI 분석 보고서');
+}
+
+// ==================== AI ====================
+let aiConnected=false;
+async function testApiConnection(){
+  const key=document.getElementById('apiKey').value.trim();const btn=document.getElementById('aiConnBtn');const dot=document.getElementById('aiDot');const txt=document.getElementById('aiStatusTxt');
+  if(!key)return;btn.textContent='🔄';btn.disabled=true;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})});
+    if(res.ok){aiConnected=true;dot.classList.add('on');txt.textContent='연결됨';btn.textContent='✅';btn.classList.add('connected');addMsg('ok','✅ 연결 성공! AI 심층 분석이 가능합니다.');}
+    else{txt.textContent='실패';btn.textContent='❌';}
+  }catch(e){txt.textContent='오류';btn.textContent='❌';}
+  btn.disabled=false;
+}
+function addMsg(cls,txt){const div=document.getElementById('aiMsg');div.innerHTML+=`<div class="msg ${cls}">${txt}</div>`;div.scrollTop=div.scrollHeight;}
+function buildCtx(){
+  const T=D.tasks,P=D.profit,K=D.kpi,SD=D.sga_detail,RD=D.kpi_retail_detail,WD=D.kpi_wholesale_detail,SMD=D.kpi_smb_detail,HC=D.hq_context;
+  const zeroInProg=T.filter(t=>t.pp===0&&t.st==='진행중');
+  return `당신은 KT M&S 경영기획팀의 Executive AI 분석 어시스턴트입니다.
+분석 원칙: ①모든 주장에 수치 근거 명시 ②구조적 원인→파급영향→개선안 순서 ③실행 가능한 구체적 권고(담당/기한 포함) ④임원 보고 수준의 간결·명확한 문체
+
+═══ ${D.period} 경영 데이터 ═══
+
+【손익 현황】
+매출: ${fB(P.revenue.total)}억 | 영업이익: ${fB(P.op.total)}억(OPM ${(P.op.total/P.revenue.total*100).toFixed(1)}%) | 순이익: ${fB(P.net_income)}억
+채널별 OPM: 소상공인${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}% > IoT${(P.op.iot/P.revenue.iot*100).toFixed(1)}% > 소매${(P.op.retail/P.revenue.retail*100).toFixed(1)}% > 도매${(P.op.wholesale/P.revenue.wholesale*100).toFixed(1)}% > 디지털${(P.op.digital/P.revenue.digital*100).toFixed(1)}% > 기업${(P.op.enterprise/P.revenue.enterprise*100).toFixed(1)}% > 법인${(P.op.corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}%
+
+【판관비 구조】총${fB(P.sga.total)}억
+인건비${fB(SD['인건비합계'].total)}억(판관비${(SD['인건비합계'].total/P.sga.total*100).toFixed(0)}%) · 소매인건비집중도 판관비내${(SD['인건비합계'].retail/P.sga.retail*100).toFixed(0)}%
+판촉비${fB(SD['판매촉진비'].total)}억 · 디지털판촉비비중${(SD['판매촉진비'].digital/P.sga.digital*100).toFixed(0)}% ← 구조적 문제
+법인판매수수료${fB(SD['판매수수료'].corporate_sales)}억 vs 법인영업이익${fB(P.op.corporate_sales)}억 ← 수수료>이익 역전 구조
+
+【본부 손익】(영업이익 기준)
+${D.hq.map(h=>{const op=h.gp-h.sga;return `${h.nm}: ${fB(op)}억(OPM ${(op/h.rev*100).toFixed(1)}%)`;}).join(' | ')}
+
+【KPI 현황】(종합/소매/도매/소상공인)
+${K.map(k=>`${k.hq}#${k.rk}: ${k.ts.toFixed(1)}점 [소매${k.rt.t.toFixed(1)} / 도매${k.wh.t.toFixed(1)} / 소상공${k.sm.t.toFixed(1)}]`).join('\n')}
+
+【KPI 세부 편차】
+소매 후불: 동부17.8>강서16.2>서부15.9>강북15.1>강남14.8 (격차 3.0p)
+소매 MNP: 동부9.2>강서8.1>서부7.8>강북7.2>강남6.9 (격차 2.3p)
+도매 신규: 강서91.2>동부90.1>강남89.3>강북86.5>서부82.4 (격차 8.9p)
+소상공 영업: 강서52.5>서부45.9>동부40.6>강북40.2>강남29.6 (격차 22.9p)
+소상공 커버리지(%): 강서78>서부71>동부65>강북63>강남52
+
+【과제 현황】
+총 ${T.length}개 | 완료${T.filter(t=>t.st==='완료').length}(${(T.filter(t=>t.st==='완료').length/T.length*100).toFixed(0)}%) | 진행중${T.filter(t=>t.st==='진행중').length} | 계획${T.filter(t=>t.st==='계획').length}
+⚠️ 진행중 추진도 0% 과제: ${zeroInProg.length}개 (즉시 점검 필요)
+핵심과제 ${T.filter(t=>t.co==='●').length}개 중 완료 ${T.filter(t=>t.co==='●'&&t.st==='완료').length}개
+
+【본부별 강약점 컨텍스트】
+${Object.entries(HC||{}).map(([h,v])=>`${h}: 강점-${v.str} / 약점-${v.wk} / 기회-${v.opp}`).join('\n')}`;
+}
+function clearAI(){document.getElementById('aiMsg').innerHTML='<div class="msg s">💡 대화 내역이 초기화되었습니다.</div>';}
+// ==================== AI 경영현황 요약 보고서 ====================
+function genAISummaryReport(){
+  const T=D.tasks,P=D.profit,K=D.kpi;
+  const done=T.filter(t=>t.st==='완료').length,prog=T.filter(t=>t.st==='진행중').length;
+  const zeroRisk=T.filter(t=>t.pp===0&&t.st==='진행중');
+  const coreNotDone=T.filter(t=>t.co==='●'&&t.st!=='완료');
+  const K1=K[0],K5=K[4];
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>경영현황 Executive 보고서</title>${rptStyle()}</head><body>
+  <div class="cover">
+    <div class="cover-tag">Confidential · For Executive Review Only</div>
+    <div class="cover-title">KT M&S 경영현황 Executive 보고서</div>
+    <div class="cover-sub">${D.period} 기준 | 경영기획팀 AI 분석</div>
+    <div class="cover-kpis">
+      <div class="cover-kpi"><div class="cover-kpi-v" style="color:#34d399">${fB(P.revenue.total)}억</div><div class="cover-kpi-l">매출</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v" style="color:#38bdf8">${fB(P.op.total)}억</div><div class="cover-kpi-l">영업이익 ${(P.op.total/P.revenue.total*100).toFixed(1)}%</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-v" style="color:#fbbf24">${K1.ts.toFixed(1)}점</div><div class="cover-kpi-l">KPI 1위 ${K1.hq}</div></div>
+    </div>
+  </div>
+
+  <h1>Ⅰ. 이달의 핵심 지표</h1>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+    ${[{l:'매출',v:fB(P.revenue.total)+'억',c:'#0369a1'},{l:'영업이익',v:fB(P.op.total)+'억',c:'#059669'},{l:'OPM',v:(P.op.total/P.revenue.total*100).toFixed(1)+'%',c:'#7c3aed'},{l:'순이익',v:fB(P.net_income)+'억',c:'#c2410c'}].map(x=>`<div style="padding:12px;background:#f8fafc;border-radius:8px;text-align:center"><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:4px">${x.l}</div><div style="font-size:18px;font-weight:800;color:${x.c}">${x.v}</div></div>`).join('')}
+  </div>
+
+  <h2>손익 핵심 포인트</h2>
+  <table><thead><tr><th>구분</th><th class="num">금액(백만)</th><th class="num">비율</th><th>판단</th></tr></thead><tbody>
+  <tr><td>매출</td><td class="num">${fM(P.revenue.total)}</td><td class="num">100%</td><td>-</td></tr>
+  <tr><td>매출총이익</td><td class="num pos">${fM(P.gross.total)}</td><td class="num">${(P.gross.total/P.revenue.total*100).toFixed(1)}%</td><td>-</td></tr>
+  <tr><td>판관비</td><td class="num neg">${fM(P.sga.total)}</td><td class="num">${(P.sga.total/P.revenue.total*100).toFixed(1)}%</td><td style="color:#f59e0b">인건비 집중(${(D.sga_detail['인건비합계'].total/P.sga.total*100).toFixed(0)}%) 모니터링 필요</td></tr>
+  <tr class="tr"><td><b>영업이익</b></td><td class="num pos" style="font-weight:700">${fM(P.op.total)}</td><td class="num" style="font-weight:700">${(P.op.total/P.revenue.total*100).toFixed(1)}%</td><td>-</td></tr>
+  </tbody></table>
+
+  <h1>Ⅱ. 채널별 수익성</h1>
+  <div class="insight">수익성 TOP 3: 소상공인(${(P.op.small_biz/P.revenue.small_biz*100).toFixed(1)}%) → IoT(${(P.op.iot/P.revenue.iot*100).toFixed(1)}%) → 소매(${(P.op.retail/P.revenue.retail*100).toFixed(1)}%)</div>
+  <div class="warn">⚠️ 법인영업 OPM 0.6% — 판매수수료(${fB(D.sga_detail['판매수수료'].corporate_sales)}억)가 영업이익(${fB(P.op.corporate_sales)}억) 초과. 구조 개선 시급</div>
+
+  <h1>Ⅲ. KPI 현황</h1>
+  <table><thead><tr><th>순위</th><th>본부</th><th class="num">종합</th><th class="num">소매</th><th class="num">도매</th><th class="num">소상공인</th></tr></thead><tbody>
+  ${K.map(k=>`<tr><td style="text-align:center;font-weight:800">${k.rk}</td><td>${k.hq}</td><td class="num" style="font-weight:700">${k.ts.toFixed(1)}</td><td class="num">${k.rt.t.toFixed(1)}</td><td class="num">${k.wh.t.toFixed(1)}</td><td class="num ${k.sm.t<55?'neg':''}">${k.sm.t.toFixed(1)}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="warn">⚠️ 소상공인 편차: 1위 강서(71.95) vs 5위 강남(49.01) — 22.9p 격차 즉시 조치 필요</div>
+
+  <h1>Ⅳ. 과제 이행 현황</h1>
+  <div class="exec-box">총 ${T.length}개 과제 중 완료 ${done}개(${(done/T.length*100).toFixed(0)}%) · 진행중 ${prog}개 · 핵심과제 미완료 ${coreNotDone.length}개</div>
+  ${zeroRisk.length>0?`<div class="warn">⚠️ 진행중 & 추진도 0% 과제 ${zeroRisk.length}개 — ${zeroRisk.slice(0,3).map(t=>t.tm+' '+t.nm).join(', ')} 등 즉시 점검</div>`:''}
+
+  <h1>Ⅴ. 전략적 권고안</h1>
+  <div class="action">
+  ① <b>[손익] 법인영업 수수료 구조 재검토</b> — 수수료(${fB(D.sga_detail['판매수수료'].corporate_sales)}억) 절감 또는 매출 성장 없이는 채널 수익성 개선 불가<br><br>
+  ② <b>[KPI] 강남·동부 소상공인 집중 지원</b> — 강서 모델 이식, 커버리지 확대 TF 구성 (1개월 내)<br><br>
+  ③ <b>[과제] 저추진 핵심과제 점검 회의</b> — ${zeroRisk.filter(t=>t.co==='●').length}개 핵심과제 포함 0% 과제 ${zeroRisk.length}개 집중 점검<br><br>
+  ④ <b>[비용] 디지털 판촉비 효율성 검토</b> — 판촉비 ${fB(D.sga_detail['판매촉진비'].digital)}억(채널판관비의 59%) 대비 OPM 2.8% — ROI 재검토 필요
+  </div>
+  </body></html>`;
+  openReport(h,'경영현황 Executive 보고서');
+}
+
+function quickAI(q){document.getElementById('aiIn').value=q;sendAI();}
+async function sendAI(){
+  const inp=document.getElementById('aiIn'),msg=inp.value.trim();if(!msg)return;
+  const key=document.getElementById('apiKey').value.trim();
+  if(!key){addMsg('s','⚠️ API Key를 입력하고 연결해주세요.');return;}
+  const mdl=document.getElementById('aiMdl').value;
+  addMsg('u',msg);inp.value='';
+  const lid='l'+Date.now();
+  document.getElementById('aiMsg').innerHTML+=`<div class="msg a" id="${lid}">🔄 분석 중...</div>`;
+  document.getElementById('aiMsg').scrollTop=9999;document.getElementById('aiBtn').disabled=true;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:mdl,max_tokens:4096,system:buildCtx(),messages:[{role:'user',content:msg}]})});
+    const data=await res.json();document.getElementById(lid).textContent=data.content?.map(c=>c.text||'').join('\n')||JSON.stringify(data.error||data);
+  }catch(err){document.getElementById(lid).innerHTML=`<span style="color:var(--r)">❌ ${err.message}</span>`;}
+  document.getElementById('aiBtn').disabled=false;document.getElementById('aiMsg').scrollTop=9999;
+}
+document.getElementById('aiIn').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();}};
+
+// ==================== UPLOAD ====================
+function handleDrop(e,type){e.preventDefault();e.currentTarget.classList.remove('drag');if(e.dataTransfer.files[0])parseExcel(e.dataTransfer.files[0],type);}
+function handleFile(input,type){if(input.files[0])parseExcel(input.files[0],type);}
+function parseExcel(file,type){const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});if(type==='task')parseTaskExcel(wb);else if(type==='profit')parseProfitExcel(wb);else parseKpiExcel(wb);}catch(err){showUpStatus(type,'err','❌ '+err.message);}};reader.readAsArrayBuffer(file);}
+function parseTaskExcel(wb){const ws=wb.Sheets['data'];if(!ws){showUpStatus('task','err','❌ "data" 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const tasks=[];for(let i=5;i<rows.length;i++){const r=rows[i];if(!r[5]||!r[1])continue;tasks.push({no:r[1],ch:r[2]||'',tm:r[3]||'',co:r[4]==='●'?'●':'',nm:String(r[5]).replace(/\n/g,' ').trim(),mg:String(r[6]||'').trim(),sc:String(r[7]||'').trim(),plan:String(r[8]||'').trim(),pg:String(r[9]||'').trim(),st:r[10]||'계획',cp:r[11]||'미완료',pp:parseFloat(r[12])||0});}if(tasks.length>0){D.tasks=tasks;initTaskUI();showUpStatus('task','ok','✅ '+tasks.length+'개 과제 로드!');}else showUpStatus('task','err','❌ 데이터 없음');}
+function parseProfitExcel(wb){try{const ws=wb.Sheets['종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('profit','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const norm=x=>String(x||'').trim().replace(/\s+/g,'');const find=l=>rows.find(r=>r[0]&&norm(r[0])===norm(l));const mk=r=>({total:r[1]||0,retail:r[5]||0,wholesale:r[6]||0,digital:r[7]||0,enterprise:r[8]||0,iot:r[9]||0,corporate_sales:r[10]||0,small_biz:r[11]||0});const rev=find('매출'),gp=find('매출총이익'),sga=find('판매비와일반관리비');if(rev)D.profit.revenue=mk(rev);if(gp)D.profit.gross=mk(gp);if(sga)D.profit.sga=mk(sga);CHS.forEach(c=>D.profit.op[c]=(D.profit.gross[c]||0)-(D.profit.sga[c]||0));D.profit.op.total=(D.profit.gross.total||0)-(D.profit.sga.total||0);initProfitUI();showUpStatus('profit','ok','✅ 손익 업데이트!');}catch(err){showUpStatus('profit','err','❌ '+err.message);}}
+function parseKpiExcel(wb){try{const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];for(let i=11;i<=16;i++){const r=rows[i];if(!r||!r[1])continue;kpi.push({hq:r[1],ts:r[2]||0,rk:r[3]||0,rt:{t:r[4]||0,s:r[5]||0,p:r[6]||0},wh:{t:r[7]||0,s:r[8]||0,p:r[9]||0},sm:{t:r[10]||0,s:r[11]||0,p:r[12]||0}});}if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;initKpiUI();showUpStatus('kpi','ok','✅ KPI 업데이트!');}else showUpStatus('kpi','err','❌ KPI 데이터 부족');}catch(err){showUpStatus('kpi','err','❌ '+err.message);}}
+function showUpStatus(type,cls,msg){const el=document.getElementById('s'+type.charAt(0).toUpperCase()+type.slice(1));el.className='up-status '+cls;el.textContent=msg;}
+
+// ==================== INIT ====================
+initTaskUI();initProfitUI();initKpiUI();
+</script>
+</body>
+</html>
