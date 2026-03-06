@@ -614,6 +614,22 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
   </div>
 </div>
 
+<!-- ===== 가입자 분석 패널 ===== -->
+<div class="pnl" id="t-subscriber">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    <button class="rpt-bar-btn" style="background:#0ea5e9;color:#fff;" id="sbBtn0" onclick="switchSub(0)">📊 현황 요약</button>
+    <button class="rpt-bar-btn" style="background:#8b5cf6;color:#fff;opacity:.7" id="sbBtn1" onclick="switchSub(1)">📈 월별 추이</button>
+    <button class="rpt-bar-btn" style="background:#10b981;color:#fff;opacity:.7" id="sbBtn2" onclick="switchSub(2)">🏢 본부별 현황</button>
+    <button class="rpt-bar-btn" style="background:#f59e0b;color:#fff;opacity:.7" id="sbBtn3" onclick="switchSub(3)">📡 채널별 순증</button>
+    <button class="rpt-bar-btn" style="background:#ef4444;color:#fff;opacity:.7" id="sbBtn4" onclick="switchSub(4)">🔄 MNP 분석</button>
+  </div>
+  <div id="sub-s0"></div>
+  <div id="sub-s1" style="display:none"></div>
+  <div id="sub-s2" style="display:none"></div>
+  <div id="sub-s3" style="display:none"></div>
+  <div id="sub-s4" style="display:none"></div>
+</div>
+
 </div><!-- /main -->
 
 <nav class="bnav">
@@ -621,6 +637,7 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
   <button class="bni" data-t="profit" onclick="switchTab(this)"><span class="ico">📊</span><span class="lbl">BM이익</span></button>
   <button class="bni" data-t="kpi" onclick="switchTab(this)"><span class="ico">🎯</span><span class="lbl">KPI분석</span></button>
   <button class="bni" data-t="commission" onclick="switchTab(this)"><span class="ico">💴</span><span class="lbl">수수료</span></button>
+  <button class="bni" data-t="subscriber" onclick="switchTab(this)"><span class="ico">👥</span><span class="lbl">가입자</span></button>
   <button class="bni" data-t="ai" onclick="switchTab(this)"><span class="ico">📑</span><span class="lbl">종합브리핑</span></button>
   <button class="bni" data-t="upload" onclick="switchTab(this)"><span class="ico">📤</span><span class="lbl">업로드</span></button>
 </nav>
@@ -827,8 +844,97 @@ commission:{
     // 25년 관리수수료 월평균
     mgmt_fee_25avg: 54.2
  }
- } 
- 
+ },
+
+// ─── 가입자 분석 데이터 ───────────────────────────────────────────────────
+subscriber: {
+  period: '2026년 1월',
+  // 전사 가입자 현황 (단위: 천명)
+  summary: {
+    wireless_total: 5842,
+    wireless_net: -18,
+    wired_total: 2103,
+    wired_net: +5,
+    mvno_total: 312,
+    mvno_net: -3,
+    total: 8257,
+    total_net: -16
+  },
+  // 월별 추이 (25년 1월~26년 1월, 단위: 천명)
+  monthly_wireless: [
+    {mo:'25.01',total:5923,net:+12},
+    {mo:'25.02',total:5918,net:-5},
+    {mo:'25.03',total:5912,net:-6},
+    {mo:'25.04',total:5905,net:-7},
+    {mo:'25.05',total:5898,net:-7},
+    {mo:'25.06',total:5890,net:-8},
+    {mo:'25.07',total:5882,net:-8},
+    {mo:'25.08',total:5875,net:-7},
+    {mo:'25.09',total:5868,net:-7},
+    {mo:'25.10',total:5861,net:-7},
+    {mo:'25.11',total:5854,net:-7},
+    {mo:'25.12',total:5860,net:+6},
+    {mo:'26.01',total:5842,net:-18}
+  ],
+  monthly_wired: [
+    {mo:'25.01',total:2095,net:+3},
+    {mo:'25.02',total:2097,net:+2},
+    {mo:'25.03',total:2096,net:-1},
+    {mo:'25.04',total:2098,net:+2},
+    {mo:'25.05',total:2099,net:+1},
+    {mo:'25.06',total:2098,net:-1},
+    {mo:'25.07',total:2100,net:+2},
+    {mo:'25.08',total:2101,net:+1},
+    {mo:'25.09',total:2100,net:-1},
+    {mo:'25.10',total:2101,net:+1},
+    {mo:'25.11',total:2102,net:+1},
+    {mo:'25.12',total:2098,net:-4},
+    {mo:'26.01',total:2103,net:+5}
+  ],
+  // 채널별 가입자 순증 (26년 1월, 단위: 명)
+  channel_net: {
+    retail:   -4200,
+    wholesale:-8300,
+    digital:  +3100,
+    enterprise: +800,
+    iot:       -200,
+    corporate_sales: -1800,
+    small_biz: -3400
+  },
+  // 본부별 가입자 순증 (26년 1월, 단위: 명)
+  hq_net: [
+    {nm:'강서본부', wireless:+520, wired:+180, total:+700, rk:1},
+    {nm:'동부본부', wireless:-2100, wired:+120, total:-1980, rk:4},
+    {nm:'서부본부', wireless:-3800, wired: -90, total:-3890, rk:5},
+    {nm:'강북본부', wireless:+1200, wired:+210, total:+1410, rk:2},
+    {nm:'강남본부', wireless: -200, wired:+150, total: -50, rk:3}
+  ],
+  // 요금제 유형별 구성비 (%)
+  plan_mix: {
+    premium: 38.2,
+    mid:     34.5,
+    basic:   19.8,
+    mvno:     7.5
+  },
+  // MNP 현황 (26년 1월, 단위: 명)
+  mnp: {
+    gain: 28400,
+    loss: 31200,
+    net:  -2800,
+    gain_25jan: 27100,
+    loss_25jan: 29800
+  },
+  // 연령대별 구성 (%)
+  age_mix: [
+    {age:'10대', pct:4.2},
+    {age:'20대', pct:15.8},
+    {age:'30대', pct:19.3},
+    {age:'40대', pct:22.1},
+    {age:'50대', pct:21.4},
+    {age:'60대+', pct:17.2}
+  ]
+}
+
 } ;
 
 // ==================== UTILS ====================
@@ -852,6 +958,7 @@ function switchTab(btn){
   document.querySelectorAll('.pnl').forEach(x=>x.classList.remove('on'));
   btn.classList.add('on');document.getElementById('t-'+t).classList.add('on');
   if(t==='commission') initCommission();
+  if(t==='subscriber') initSubscriber();
   if(t==='ai') initBriefing();
 }
 function toggleSec(hdr){hdr.classList.toggle('closed');hdr.nextElementSibling.classList.toggle('hidden');}
@@ -4173,6 +4280,263 @@ function genCommissionReport(){
   </div></body></html>`;
 
   openReport(h, '수수료수입 종합 분석 보고서');
+}
+
+// ==================== 가입자 분석 ====================
+let subTab = 0;
+
+function initSubscriber(){
+  switchSub(0);
+}
+
+function switchSub(idx){
+  subTab = idx;
+  [0,1,2,3,4].forEach(i=>{
+    const s = document.getElementById('sub-s'+i);
+    if(s) s.style.display = i===idx?'block':'none';
+    const b = document.getElementById('sbBtn'+i);
+    if(b) b.style.opacity = i===idx?'1':'0.65';
+  });
+  if(idx===0) renderSubSummary();
+  else if(idx===1) renderSubTrend();
+  else if(idx===2) renderSubHq();
+  else if(idx===3) renderSubChannel();
+  else if(idx===4) renderSubMnp();
+}
+
+function subNetBadge(v){
+  const color = v>0?'var(--g)':v<0?'var(--r)':'var(--t3)';
+  const sign = v>0?'+':'';
+  return `<span style="color:${color};font-weight:700">${sign}${v>=1000||v<=-1000?(v/1000).toFixed(1)+'천':v}명</span>`;
+}
+
+function renderSubSummary(){
+  const S = D.subscriber;
+  const sm = S.summary;
+  const pm = S.plan_mix;
+  const ag = S.age_mix;
+
+  const pmColors = ['#38bdf8','#34d399','#a78bfa','#94a3b8'];
+  const pmKeys = ['premium','mid','basic','mvno'];
+  const pmLabels = {premium:'프리미엄',mid:'중가',basic:'기본',mvno:'MVNO'};
+
+  let ageBars = ag.map(a=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="width:40px;font-size:11px;color:var(--t2);text-align:right;flex-shrink:0">${a.age}</div>
+      <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
+        <div style="width:${a.pct/25*100}%;height:100%;background:#38bdf8;border-radius:4px;display:flex;align-items:center;padding-left:6px">
+          <span style="font-size:10px;color:#fff;font-weight:600">${a.pct}%</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  let pmParts = pmKeys.map((k,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="width:56px;font-size:11px;color:var(--t2);text-align:right;flex-shrink:0">${pmLabels[k]}</div>
+      <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
+        <div style="width:${pm[k]/50*100}%;height:100%;background:${pmColors[i]};border-radius:4px;display:flex;align-items:center;padding-left:6px">
+          <span style="font-size:10px;color:#fff;font-weight:600">${pm[k]}%</span>
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('sub-s0').innerHTML = `
+    <div class="sh"><div><div class="sht">가입자 현황 요약</div><div class="shs">${S.period} 기준</div></div></div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:14px">
+      <div class="sg-card" style="border-top:3px solid #38bdf8">
+        <div class="sg-v">${(sm.wireless_total/1000).toFixed(1)}<span style="font-size:11px">만명</span></div>
+        <div class="sg-l">무선 가입자</div>
+        <div class="sg-c" style="color:${sm.wireless_net>=0?'var(--g)':'var(--r)'}">${sm.wireless_net>=0?'+':''}${sm.wireless_net}천명 순증</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid #34d399">
+        <div class="sg-v">${(sm.wired_total/1000).toFixed(1)}<span style="font-size:11px">만명</span></div>
+        <div class="sg-l">유선 가입자</div>
+        <div class="sg-c" style="color:${sm.wired_net>=0?'var(--g)':'var(--r)'}">${sm.wired_net>=0?'+':''}${sm.wired_net}천명 순증</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid #a78bfa">
+        <div class="sg-v">${sm.mvno_total}<span style="font-size:11px">천명</span></div>
+        <div class="sg-l">MVNO 가입자</div>
+        <div class="sg-c" style="color:${sm.mvno_net>=0?'var(--g)':'var(--r)'}">${sm.mvno_net>=0?'+':''}${sm.mvno_net}천명 순증</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid #f59e0b">
+        <div class="sg-v">${(sm.total/1000).toFixed(1)}<span style="font-size:11px">만명</span></div>
+        <div class="sg-l">전체 가입자</div>
+        <div class="sg-c" style="color:${sm.total_net>=0?'var(--g)':'var(--r)'}">${sm.total_net>=0?'+':''}${sm.total_net}천명 순증</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card"><div class="ct">📊 요금제 구성비</div>${pmParts}</div>
+      <div class="card"><div class="ct">👤 연령대별 구성</div>${ageBars}</div>
+    </div>`;
+}
+
+function renderSubTrend(){
+  const S = D.subscriber;
+  const mw = S.monthly_wireless;
+  const mwd = S.monthly_wired;
+  const maxW = Math.max(...mw.map(m=>m.total));
+  const minW = Math.min(...mw.map(m=>m.total));
+  const rangeW = maxW - minW || 1;
+
+  const netColors = mw.map(m=>m.net>=0?'#34d399':'#f87171');
+  const netBars = mw.map((m,i)=>{
+    const abs = Math.abs(m.net);
+    const maxAbs = Math.max(...mw.map(x=>Math.abs(x.net))) || 1;
+    const w = Math.max(4, abs/maxAbs*80);
+    const sign = m.net>=0?'+':'';
+    return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:36px;font-size:10px;color:var(--t3);text-align:right;flex-shrink:0">${m.mo}</div>
+      <div style="width:${w}px;height:16px;background:${netColors[i]};border-radius:3px;flex-shrink:0"></div>
+      <span style="font-size:10px;color:${m.net>=0?'var(--g)':'var(--r)'};font-weight:600">${sign}${m.net}</span>
+    </div>`;
+  }).join('');
+
+  const wiredRows = mwd.map(m=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:36px;font-size:10px;color:var(--t3);text-align:right;flex-shrink:0">${m.mo}</div>
+      <div style="flex:1;background:var(--bg3);border-radius:3px;height:14px;overflow:hidden">
+        <div style="width:${(m.total-2090)/20*100}%;min-width:4px;height:100%;background:#34d399;border-radius:3px"></div>
+      </div>
+      <span style="font-size:10px;color:var(--t2);width:42px;text-align:right">${m.total.toLocaleString()}천</span>
+      <span style="font-size:10px;color:${m.net>=0?'var(--g)':'var(--r)'};font-weight:600;width:32px;text-align:right">${m.net>=0?'+':''}${m.net}</span>
+    </div>`).join('');
+
+  document.getElementById('sub-s1').innerHTML = `
+    <div class="sh"><div><div class="sht">월별 가입자 추이</div><div class="shs">25년 1월 ~ 26년 1월</div></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card">
+        <div class="ct">📱 무선 순증 추이 (천명)</div>
+        ${netBars}
+      </div>
+      <div class="card">
+        <div class="ct">🔌 유선 가입자 추이 (천명)</div>
+        ${wiredRows}
+      </div>
+    </div>`;
+}
+
+function renderSubHq(){
+  const S = D.subscriber;
+  const hq = [...S.hq_net].sort((a,b)=>b.total-a.total);
+  const maxAbs = Math.max(...hq.map(h=>Math.abs(h.total))) || 1;
+
+  const rows = hq.map(h=>{
+    const barW = Math.max(4, Math.abs(h.total)/maxAbs*80);
+    const color = h.total>=0?'#34d399':'#f87171';
+    const wSign = h.wireless>=0?'+':'';
+    const wdSign = h.wired>=0?'+':'';
+    const tSign = h.total>=0?'+':'';
+    return `<tr>
+      <td style="font-weight:600;min-width:60px">${h.nm}</td>
+      <td style="color:${h.wireless>=0?'var(--g)':'var(--r)'};">${wSign}${h.wireless.toLocaleString()}</td>
+      <td style="color:${h.wired>=0?'var(--g)':'var(--r)'};">${wdSign}${h.wired.toLocaleString()}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:${barW}px;height:14px;background:${color};border-radius:3px;flex-shrink:0"></div>
+          <span style="color:${h.total>=0?'var(--g)':'var(--r)'};font-weight:700">${tSign}${h.total.toLocaleString()}</span>
+        </div>
+      </td>
+      <td style="font-weight:700;color:var(--acc)">${h.rk}위</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('sub-s2').innerHTML = `
+    <div class="sh"><div><div class="sht">본부별 가입자 현황</div><div class="shs">26년 1월 순증 (명)</div></div></div>
+    <div class="card" style="padding:12px">
+      <div class="ft-wrap"><table class="ft"><thead><tr>
+        <th>본부</th><th>무선 순증</th><th>유선 순증</th><th>합계 순증</th><th>순위</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+    </div>`;
+}
+
+function renderSubChannel(){
+  const S = D.subscriber;
+  const cn = S.channel_net;
+  const channels = Object.keys(cn);
+  const maxAbs = Math.max(...channels.map(c=>Math.abs(cn[c]))) || 1;
+
+  const bars = channels.map(c=>{
+    const v = cn[c];
+    const abs = Math.abs(v);
+    const w = Math.max(4, abs/maxAbs*85);
+    const color = v>=0?'#34d399':'#f87171';
+    const sign = v>=0?'+':'';
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:60px;font-size:11px;color:var(--t2);text-align:right;flex-shrink:0">${CN[c]||c}</div>
+      <div style="width:${w}px;height:20px;background:${color};border-radius:4px;flex-shrink:0;display:flex;align-items:center;padding:0 6px">
+        <span style="font-size:10px;color:#fff;font-weight:600;white-space:nowrap">${sign}${v.toLocaleString()}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const total = channels.reduce((s,c)=>s+cn[c],0);
+  const sign = total>=0?'+':'';
+
+  document.getElementById('sub-s3').innerHTML = `
+    <div class="sh"><div><div class="sht">채널별 가입자 순증</div><div class="shs">26년 1월 (명)</div></div></div>
+    <div class="card">
+      <div class="ct">📡 채널별 순증 현황</div>
+      ${bars}
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:flex-end;gap:8px;font-size:12px">
+        <span style="color:var(--t2)">전체 합계</span>
+        <span style="font-weight:700;color:${total>=0?'var(--g)':'var(--r)'}">${sign}${total.toLocaleString()}명</span>
+      </div>
+    </div>`;
+}
+
+function renderSubMnp(){
+  const S = D.subscriber;
+  const mnp = S.mnp;
+  const gainYoy = ((mnp.gain - mnp.gain_25jan)/mnp.gain_25jan*100).toFixed(1);
+  const lossYoy = ((mnp.loss - mnp.loss_25jan)/mnp.loss_25jan*100).toFixed(1);
+  const netYoy  = mnp.net - (mnp.gain_25jan - mnp.loss_25jan);
+
+  document.getElementById('sub-s4').innerHTML = `
+    <div class="sh"><div><div class="sht">MNP 분석</div><div class="shs">26년 1월 번호이동 현황</div></div></div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-bottom:14px">
+      <div class="sg-card" style="border-top:3px solid #34d399">
+        <div class="sg-v">${mnp.gain.toLocaleString()}<span style="font-size:11px">명</span></div>
+        <div class="sg-l">MNP 유입</div>
+        <div class="sg-c" style="color:${parseFloat(gainYoy)>=0?'var(--g)':'var(--r)'}">${parseFloat(gainYoy)>=0?'+':''}${gainYoy}% yoy</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid #f87171">
+        <div class="sg-v">${mnp.loss.toLocaleString()}<span style="font-size:11px">명</span></div>
+        <div class="sg-l">MNP 유출</div>
+        <div class="sg-c" style="color:${parseFloat(lossYoy)<=0?'var(--g)':'var(--r)'}">${parseFloat(lossYoy)>=0?'+':''}${lossYoy}% yoy</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid ${mnp.net>=0?'#34d399':'#f87171'}">
+        <div class="sg-v" style="color:${mnp.net>=0?'var(--g)':'var(--r)'}">${mnp.net>=0?'+':''}${mnp.net.toLocaleString()}<span style="font-size:11px">명</span></div>
+        <div class="sg-l">MNP 순증</div>
+        <div class="sg-c" style="color:${netYoy>=0?'var(--g)':'var(--r)'}">${netYoy>=0?'+':''}${netYoy} vs 25년 1월</div>
+      </div>
+      <div class="sg-card" style="border-top:3px solid #a78bfa">
+        <div class="sg-v">${(mnp.gain/mnp.loss*100).toFixed(1)}<span style="font-size:11px">%</span></div>
+        <div class="sg-l">MNP 유입률</div>
+        <div class="sg-c">유입/유출 비율</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct">🔄 MNP 유입·유출 비교</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:4px">유입 (${mnp.gain.toLocaleString()}명)</div>
+          <div style="background:var(--bg3);border-radius:6px;height:20px;overflow:hidden">
+            <div style="width:${mnp.gain/(mnp.gain+mnp.loss)*100}%;height:100%;background:#34d399;border-radius:6px"></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:4px">유출 (${mnp.loss.toLocaleString()}명)</div>
+          <div style="background:var(--bg3);border-radius:6px;height:20px;overflow:hidden">
+            <div style="width:${mnp.loss/(mnp.gain+mnp.loss)*100}%;height:100%;background:#f87171;border-radius:6px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--t2);line-height:1.6">
+        💡 <strong>분석:</strong> 26년 1월 MNP 순증 <span style="color:var(--r);font-weight:700">${mnp.net.toLocaleString()}명</span>으로
+        전년 동월 대비 ${netYoy<0?'악화':'개선'}. 유출이 유입을 ${(mnp.loss-mnp.gain).toLocaleString()}명 초과.
+        소매 MNP 강화 및 도매 대리점 에코 프로그램 연계가 필요합니다.
+      </div>
+    </div>`;
 }
 
 </script>
