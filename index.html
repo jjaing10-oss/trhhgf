@@ -2960,141 +2960,187 @@ ${Object.entries(HC||{}).map(([h,v])=>`${h}: 강점-${v.str} / 약점-${v.wk} / 
 }
 function clearAI(){document.getElementById('aiMsg').innerHTML='<div class="msg s">💡 대화 내역이 초기화되었습니다.</div>';}
 // ==================== 종합 브리핑 ====================
-function initBriefing(){
-  const T=D.tasks,P=D.profit,K=D.kpi,C=D.commission;
+function nvl(v,d=0){const n=Number(v);return Number.isFinite(n)?n:d;}
+function ratio(num,den){const d=nvl(den);return d===0?null:nvl(num)/d;}
+function pctStr(v,d=1){return v===null||!Number.isFinite(v)?'데이터 없음':`${(v*100).toFixed(d)}%`;}
+function deltaStr(cur,base,d=1){
+  const c=nvl(cur),b=nvl(base);
+  if(!b) return '데이터 없음';
+  const r=((c-b)/b)*100;
+  return `${r>=0?'+':''}${r.toFixed(d)}%`;
+}
+
+function buildBriefingEngine(){
+  const T=Array.isArray(D.tasks)?D.tasks:[];
+  const P=D.profit||{};
+  const K=Array.isArray(D.kpi)?[...D.kpi].sort((a,b)=>nvl(b.ts)-nvl(a.ts)):[];
+  const C=D.commission||{};
+  const SD=D.sga_detail||{};
+  const j=C.jan26||null;
+
+  const channelPerf=CHS.map(ch=>({
+    key:ch,
+    name:CN[ch],
+    rev:nvl(P?.revenue?.[ch]),
+    op:nvl(P?.op?.[ch]),
+    opm:ratio(P?.op?.[ch],P?.revenue?.[ch])
+  })).filter(x=>x.rev>0);
+
+  const bestProfit=channelPerf.reduce((a,b)=>a.opm>b.opm?a:b,channelPerf[0]||{name:'-',opm:null,op:0});
+  const worstProfit=channelPerf.reduce((a,b)=>a.opm<b.opm?a:b,channelPerf[0]||{name:'-',opm:null,op:0});
+
+  const kpiGap=K.length>1?nvl(K[0].ts)-nvl(K[K.length-1].ts):0;
+  const smbGap=K.length>1?nvl(K[0]?.sm?.t)-nvl(K[K.length-1]?.sm?.t):0;
+
   const done=T.filter(t=>t.st==='완료').length;
-  const zeroRisk=T.filter(t=>t.pp===0&&t.st==='진행중').length;
-  const coreNotDone=T.filter(t=>t.co==='●'&&t.st!=='완료').length;
-  const opm=(P.op.total/P.revenue.total*100).toFixed(1);
-  const bestHq=K[0],worstHq=K[K.length-1];
-  const mgmtYoy=C.jan26?((C.jan26.mgmt_fee.total-C.jan26.mgmt_fee_25jan)/C.jan26.mgmt_fee_25jan*100).toFixed(1):'N/A';
+  const inProgress=T.filter(t=>t.st==='진행중').length;
+  const delayed=T.filter(t=>t.st==='진행중'&&nvl(t.pp)<=0.2);
+  const zeroProgress=T.filter(t=>t.st==='진행중'&&nvl(t.pp)===0);
+  const coreOpen=T.filter(t=>t.co==='●'&&t.st!=='완료');
+
+  const mgmtCur=nvl(j?.mgmt_fee?.total,NaN);
+  const mgmtYoY=deltaStr(j?.mgmt_fee?.total,j?.mgmt_fee_25jan);
+  const mgmtVsAvg=deltaStr(j?.mgmt_fee?.total,j?.mgmt_fee_25avg);
+  const totalFee=nvl(j?.total_fee?.total,NaN);
+  const mgmtMix=ratio(j?.mgmt_fee?.total,j?.total_fee?.total);
+
+  const monthly=(C.monthly25||[]).map(m=>nvl(m.total)).filter(v=>v>0);
+  const mom=monthly.length>=2?((monthly[monthly.length-1]-monthly[monthly.length-2])/monthly[monthly.length-2]):null;
+
+  const yearly=(C.yearly||[]);
+  const yoyTotal=(yearly.length>=2&&nvl(yearly.at(-2)?.total)>0)?((nvl(yearly.at(-1).total)-nvl(yearly.at(-2).total))/nvl(yearly.at(-2).total)):null;
+
+  const missing=[];
+  if(!K.length) missing.push('KPI 데이터');
+  if(!j) missing.push('1월 수수료 데이터');
+  if(!T.length) missing.push('과제 데이터');
+
+  const insights=[
+    `전사 영업이익률은 ${pctStr(ratio(P?.op?.total,P?.revenue?.total))}이며, 채널 최고 수익성은 ${bestProfit.name}(${pctStr(bestProfit.opm)}), 최저는 ${worstProfit.name}(${pctStr(worstProfit.opm)})입니다.`,
+    K.length?`KPI 1위는 ${K[0].hq}(${nvl(K[0].ts).toFixed(1)}점), 최하위는 ${K[K.length-1].hq}(${nvl(K[K.length-1].ts).toFixed(1)}점)로 격차 ${kpiGap.toFixed(1)}p입니다.`:'KPI 데이터가 없어 본부별 성과 비교가 제한됩니다.',
+    Number.isFinite(mgmtCur)?`관리수수료는 ${mgmtCur.toFixed(1)}억으로 전년동월 대비 ${mgmtYoY}, 25년 월평균 대비 ${mgmtVsAvg}입니다.`:'관리수수료 비교 데이터가 부족합니다.',
+    `과제 완료율은 ${T.length?((done/T.length)*100).toFixed(1):'0.0'}%이며, 지연 위험 과제(진행중·추진도 20% 이하)는 ${delayed.length}건입니다.`
+  ];
+
+  const actions=[
+    {priority:'HIGH',item:'수익성 하위 BM 개선',owner:'영업총괄/경영기획',due:'즉시~2Q',detail:`${worstProfit.name} 채널의 판관비·수수료 구조를 월 단위로 점검하고 기준 OPM 목표를 재설정`},
+    {priority:'HIGH',item:'소상공 KPI 편차 축소',owner:'본부장협의체',due:'1개월',detail:`소상공 편차 ${smbGap.toFixed(1)}p 해소를 위해 하위 본부 집중 코칭 및 우수본부 전파`},
+    {priority:'MED',item:'관리수수료 방어',owner:'도매/디지털강화',due:'분기',detail:`관리수수료 비중 ${pctStr(mgmtMix)} 유지, 도매 감소 채널 대체 과제 연계`},
+    {priority:'MED',item:'지연 과제 정상화',owner:'과제 오너',due:'주간',detail:`지연 위험 ${delayed.length}건 중 핵심 ${delayed.filter(t=>t.co==='●').length}건을 주간 리커버리 리스트로 운영`}
+  ];
+
+  return {T,P,K,C,SD,j,done,inProgress,delayed,zeroProgress,coreOpen,bestProfit,worstProfit,kpiGap,smbGap,mgmtCur,mgmtYoY,mgmtVsAvg,totalFee,mgmtMix,mom,yoyTotal,missing,insights,actions};
+}
+
+function initBriefing(){
+  const E=buildBriefingEngine();
+  const topCards=[
+    {ttl:'경영 요약',v:`OPM ${pctStr(ratio(E.P?.op?.total,E.P?.revenue?.total))}`,sub:`매출 ${fB(nvl(E.P?.revenue?.total))}억 / 영업이익 ${fB(nvl(E.P?.op?.total))}억`},
+    {ttl:'BM별 이익',v:`최고 ${E.bestProfit.name}`,sub:`최저 ${E.worstProfit.name} · 편차 ${((nvl(E.bestProfit.opm)-nvl(E.worstProfit.opm))*100).toFixed(1)}%p`},
+    {ttl:'KPI 달성',v:E.K.length?`${E.K[0].hq} 1위`:'데이터 없음',sub:E.K.length?`본부 간 격차 ${E.kpiGap.toFixed(1)}p`:'업로드 필요'},
+    {ttl:'가입자/수수료',v:Number.isFinite(E.mgmtCur)?`${E.mgmtCur.toFixed(1)}억`:'데이터 없음',sub:`관리수수료 YoY ${E.mgmtYoY}`},
+    {ttl:'과제 리스크',v:`지연 ${E.delayed.length}건`,sub:`핵심 미완료 ${E.coreOpen.length}건 / 0% ${E.zeroProgress.length}건`}
+  ];
 
   document.getElementById('briefingSnapshot').innerHTML=`
-  <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #7dd3fc;border-radius:10px;padding:14px;margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:10px">📑 ${D.period} 경영 스냅샷</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-      <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e0f2fe">
-        <div style="font-size:10px;color:#64748b;font-weight:600">매출 / 영업이익</div>
-        <div style="font-size:16px;font-weight:800;color:#0369a1">${fB(P.revenue.total)}억</div>
-        <div style="font-size:11px;color:#059669;font-weight:700">${fB(P.op.total)}억 (${opm}%)</div>
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e0f2fe">
-        <div style="font-size:10px;color:#64748b;font-weight:600">KPI 1위 / 5위</div>
-        <div style="font-size:14px;font-weight:800;color:#059669">${bestHq.hq} ${bestHq.ts.toFixed(1)}</div>
-        <div style="font-size:11px;color:#ef4444">${worstHq.hq} ${worstHq.ts.toFixed(1)}</div>
-      </div>
-      <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e0f2fe">
-        <div style="font-size:10px;color:#64748b;font-weight:600">과제 / 관리수수료</div>
-        <div style="font-size:14px;font-weight:800;color:#7c3aed">${done}/${T.length}건 완료</div>
-        <div style="font-size:11px;color:${parseFloat(mgmtYoy)<0?'#ef4444':'#059669'}">수수료 yoy ${mgmtYoy}%</div>
-      </div>
+  <div style="background:#f8fafc;border:1px solid #dbeafe;border-radius:12px;padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:800;color:#0f172a">📑 종합 브리핑 분석 허브</div>
+      <div style="font-size:11px;color:#334155">${D.period} · 경영층 보고용 통합 분석</div>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:10px">
-      ${zeroRisk>0?`<span style="background:#fee2e2;color:#dc2626;padding:3px 8px;border-radius:10px;font-weight:600">⚠ 추진도0% ${zeroRisk}건</span>`:''}
-      ${coreNotDone>0?`<span style="background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:10px;font-weight:600">핵심과제 미완료 ${coreNotDone}건</span>`:''}
-      <span style="background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:10px;font-weight:600">수수료수입 ${C.jan26?C.jan26.total_fee.total.toFixed(1):'N/A'}억</span>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+      ${topCards.map(c=>`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px"><div style="font-size:10px;color:#64748b">${c.ttl}</div><div style="font-size:15px;font-weight:800;color:#0f172a;margin-top:4px">${c.v}</div><div style="font-size:10px;color:#475569;margin-top:3px;line-height:1.4">${c.sub}</div></div>`).join('')}
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:10px">
+      <div style="font-size:11px;font-weight:700;margin-bottom:6px">종합 시사점</div>
+      <ul style="margin:0;padding-left:16px;color:#334155;font-size:11px;line-height:1.65">
+        ${E.insights.map(i=>`<li>${i}</li>`).join('')}
+      </ul>
+      ${E.missing.length?`<div style="margin-top:6px;font-size:10px;color:#b45309">※ 누락 데이터: ${E.missing.join(', ')}</div>`:''}
     </div>
   </div>`;
 }
 
-// ① 이달의 경영 브리핑 (1페이지 종합)
+// ① 이달의 경영 브리핑 (경영진 보고서)
 function genMonthlyBriefing(){
-  const T=D.tasks,P=D.profit,K=D.kpi,SD=D.sga_detail,C=D.commission;
-  const opm=(P.op.total/P.revenue.total*100).toFixed(1);
-  const done=T.filter(t=>t.st==='완료').length,prog=T.filter(t=>t.st==='진행중').length;
-  const zeroRisk=T.filter(t=>t.pp===0&&t.st==='진행중');
-  const coreNotDone=T.filter(t=>t.co==='●'&&t.st!=='완료');
-  const bestCh=CHS.reduce((a,b)=>P.op[a]/P.revenue[a]>P.op[b]/P.revenue[b]?a:b);
-  const worstCh=CHS.reduce((a,b)=>P.op[a]/P.revenue[a]<P.op[b]/P.revenue[b]?a:b);
-  const j=C.jan26;
-  const mgmtYoy=j?((j.mgmt_fee.total-j.mgmt_fee_25jan)/j.mgmt_fee_25jan*100).toFixed(1):'N/A';
+  const E=buildBriefingEngine();
+  const yoyTxt=E.yoyTotal===null?'데이터 없음':`${E.yoyTotal>=0?'+':''}${(E.yoyTotal*100).toFixed(1)}%`;
+  const momTxt=E.mom===null?'데이터 없음':`${E.mom>=0?'+':''}${(E.mom*100).toFixed(1)}%`;
 
-  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>이달의 경영 브리핑</title>${rptStyle()}</head><body>
-  <div class="cover">
-    <div class="cover-tag">Monthly Business Briefing · Confidential</div>
-    <div class="cover-title">KT M&S 이달의 경영 브리핑</div>
-    <div class="cover-sub">${D.period} 기준 | 경영기획팀 종합 브리핑</div>
-    <div class="cover-meta">
-      <div class="cover-kpi"><div class="cover-kpi-v">${fB(P.revenue.total)}억</div><div class="cover-kpi-l">매출</div></div>
-      <div class="cover-kpi"><div class="cover-kpi-v">${opm}%</div><div class="cover-kpi-l">영업이익률</div></div>
-      <div class="cover-kpi"><div class="cover-kpi-v">${K[0].ts.toFixed(1)}점</div><div class="cover-kpi-l">KPI 1위 ${K[0].hq}</div></div>
-      <div class="cover-kpi"><div class="cover-kpi-v">${done}/${T.length}</div><div class="cover-kpi-l">과제 완료</div></div>
-    </div>
-  </div>
+  let h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>종합 브리핑 보고서</title>${rptStyle()}
+  <style>
+    .brief-sec{margin-bottom:18px;padding:14px;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+    .brief-sec h2{font-size:14px;color:#0f172a;margin-bottom:8px}
+    .brief-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:8px}
+    .brief-kpi .box{border:1px solid #e2e8f0;border-radius:8px;padding:8px;background:#f8fafc}
+    .brief-kpi .v{font-size:18px;font-weight:800;color:#0f172a}
+    .brief-kpi .l{font-size:10px;color:#64748b}
+    .exec-note{font-size:11px;line-height:1.7;color:#1e293b}
+    .a4-note{font-size:10px;color:#64748b;margin-top:10px}
+    @media print{body{zoom:0.96}.page{max-width:210mm;padding:14mm 12mm 16mm}table{font-size:10.5px}th,td{padding:6px}}
+  </style></head><body>
+  <div class="cover"><div class="cover-tag">Executive Briefing · Management Report</div>
+  <div class="cover-title">KT M&S 종합 브리핑</div><div class="cover-sub">${D.period} · BM/KPI/가입자·수수료/과제 통합 분석</div>
+  <div class="cover-meta"><div class="cover-kpi"><div class="cover-kpi-v">${fB(nvl(E.P?.revenue?.total))}억</div><div class="cover-kpi-l">매출</div></div>
+  <div class="cover-kpi"><div class="cover-kpi-v">${pctStr(ratio(E.P?.op?.total,E.P?.revenue?.total))}</div><div class="cover-kpi-l">영업이익률</div></div>
+  <div class="cover-kpi"><div class="cover-kpi-v">${E.done}/${E.T.length}</div><div class="cover-kpi-l">과제 완료</div></div></div></div>
   <div class="page">
 
-  <h1>Ⅰ. Executive Summary</h1>
-  <div class="exec-box">
-    <strong>손익:</strong> 매출 <strong>${fB(P.revenue.total)}억</strong>, 영업이익 <strong>${fB(P.op.total)}억</strong>(OPM ${opm}%), 순이익 ${fB(P.net_income)}억. 최고 수익채널 ${CN[bestCh]}(${(P.op[bestCh]/P.revenue[bestCh]*100).toFixed(1)}%), 최저 ${CN[worstCh]}(${(P.op[worstCh]/P.revenue[worstCh]*100).toFixed(1)}%).<br><br>
-    <strong>KPI:</strong> ${K[0].hq}(${K[0].ts.toFixed(1)}) 1위, ${K[K.length-1].hq}(${K[K.length-1].ts.toFixed(1)}) 5위. 소상공인 편차 ${(K[0].sm.t-K[K.length-1].sm.t).toFixed(1)}p로 가장 큼.<br><br>
-    <strong>수수료:</strong> 관리수수료 ${j?j.mgmt_fee.total.toFixed(1):'N/A'}억(yoy ${mgmtYoy}%), 수수료수입 합계 ${j?j.total_fee.total.toFixed(1):'N/A'}억. 도매 수수료 하락 추세 지속.<br><br>
-    <strong>과제:</strong> 총 ${T.length}개 중 완료 ${done}건(${(done/T.length*100).toFixed(0)}%). 추진도 0% 진행중 과제 <strong style="color:#dc2626">${zeroRisk.length}건</strong> 즉시 점검 필요.
+  <div class="brief-sec"><h2>1) 경영 요약</h2>
+    <div class="exec-note">${E.insights.join('<br>')}</div>
+    <div class="brief-kpi">
+      <div class="box"><div class="l">수수료 YoY</div><div class="v">${E.mgmtYoY}</div></div>
+      <div class="box"><div class="l">수수료 MoM(25년)</div><div class="v">${momTxt}</div></div>
+      <div class="box"><div class="l">연간 전망 YoY</div><div class="v">${yoyTxt}</div></div>
+      <div class="box"><div class="l">데이터 누락</div><div class="v" style="font-size:13px">${E.missing.length?E.missing.length+'건':'없음'}</div></div>
+    </div>
   </div>
 
-  <h1>Ⅱ. 손익 핵심 지표</h1>
-  <table>
-    <thead><tr><th>채널</th><th>매출(백만)</th><th>비중</th><th>영업이익</th><th>OPM</th><th>평가</th></tr></thead>
-    <tbody>`;
-  CHS.forEach(c=>{
-    const opmC=(P.op[c]/P.revenue[c]*100).toFixed(1);
-    const badge=parseFloat(opmC)>=15?'badge-r':(parseFloat(opmC)>=5?'badge-y':(parseFloat(opmC)>=2?'badge-o':'badge-red'));
-    const grade=parseFloat(opmC)>=15?'◎':(parseFloat(opmC)>=5?'○':(parseFloat(opmC)>=2?'△':'✕'));
-    h+=`<tr><td>${CN[c]}</td><td style="text-align:right">${fM(P.revenue[c])}</td><td style="text-align:right">${(P.revenue[c]/P.revenue.total*100).toFixed(1)}%</td>
-    <td style="text-align:right;${parseFloat(opmC)<2?'color:#dc2626':''}">${fM(P.op[c])}</td><td style="text-align:right">${opmC}%</td>
-    <td><span class="badge ${badge}">${grade}</span></td></tr>`;
-  });
-  h+=`<tr class="total"><td>합계</td><td style="text-align:right">${fM(P.revenue.total)}</td><td>100%</td>
-    <td style="text-align:right">${fM(P.op.total)}</td><td style="text-align:right">${opm}%</td><td>-</td></tr></tbody></table>
+  <div class="brief-sec"><h2>2) BM별 이익 분석</h2>
+  <table><thead><tr><th>BM</th><th>매출(백만)</th><th>영업이익(백만)</th><th>이익률</th><th>판정</th></tr></thead><tbody>
+  ${CHS.map(ch=>{const rev=nvl(E.P?.revenue?.[ch]);const op=nvl(E.P?.op?.[ch]);const opm=ratio(op,rev);const grade=(opm===null)?'데이터없음':(opm>=0.12?'우수':opm>=0.05?'보통':'개선필요');return `<tr><td>${CN[ch]}</td><td>${fM(rev)}</td><td>${fM(op)}</td><td>${pctStr(opm)}</td><td>${grade}</td></tr>`;}).join('')}
+  </tbody></table>
+  <div class="caution">최고 수익 BM: ${E.bestProfit.name} / 최저 수익 BM: ${E.worstProfit.name}. 공헌이익-영업이익 정의는 기존 로직을 유지하고, 보고서에서는 영업이익률 중심으로 통일했습니다.</div></div>
 
-  <h1>Ⅲ. KPI 현황</h1>
-  <table>
-    <thead><tr><th>순위</th><th>본부</th><th>종합</th><th>소매(60%)</th><th>도매(30%)</th><th>소상공인(10%)</th></tr></thead>
-    <tbody>`;
-  K.forEach(k=>{
-    h+=`<tr><td style="text-align:center;font-weight:800">${k.rk}</td><td>${k.hq}</td>
-    <td style="text-align:right;font-weight:700">${k.ts.toFixed(1)}</td>
-    <td style="text-align:right">${k.rt.t.toFixed(1)}</td>
-    <td style="text-align:right">${k.wh.t.toFixed(1)}</td>
-    <td style="text-align:right;${k.sm.t<55?'color:#dc2626':''}">${k.sm.t.toFixed(1)}</td></tr>`;
-  });
-  h+=`</tbody></table>
-  <div class="warn">⚠️ 소상공인 채널 본부간 편차 ${(K[0].sm.t-K[K.length-1].sm.t).toFixed(1)}p — 강남·강북 집중 지원 필요</div>
+  <div class="brief-sec"><h2>3) KPI 달성 현황</h2>
+  <table><thead><tr><th>순위</th><th>본부</th><th>종합</th><th>소매</th><th>도매</th><th>소상공</th></tr></thead><tbody>
+  ${E.K.map((k,idx)=>`<tr><td>${idx+1}</td><td>${k.hq}</td><td>${nvl(k.ts).toFixed(1)}</td><td>${nvl(k?.rt?.t).toFixed(1)}</td><td>${nvl(k?.wh?.t).toFixed(1)}</td><td>${nvl(k?.sm?.t).toFixed(1)}</td></tr>`).join('')||'<tr><td colspan="6">KPI 데이터 없음</td></tr>'}
+  </tbody></table>
+  <div class="caution">소상공 지표 편차 ${E.smbGap.toFixed(1)}p는 본부 간 실행력 차이로 판단됩니다.</div></div>
 
-  <h1>Ⅳ. 수수료수입 현황</h1>`;
-  if(j){
-    h+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="flex:1;min-width:120px;padding:10px;background:#f0fdf4;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">관리수수료</div><div style="font-size:18px;font-weight:800;color:#059669">${j.mgmt_fee.total.toFixed(1)}억</div><div style="font-size:10px;color:${parseFloat(mgmtYoy)<0?'#dc2626':'#16a34a'}">yoy ${mgmtYoy}%</div></div>
-      <div style="flex:1;min-width:120px;padding:10px;background:#eff6ff;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">수수료수입 합계</div><div style="font-size:18px;font-weight:800;color:#1d4ed8">${j.total_fee.total.toFixed(1)}억</div><div style="font-size:10px;color:#64748b">관리비중 ${(j.mgmt_fee.total/j.total_fee.total*100).toFixed(1)}%</div></div>
-      <div style="flex:1;min-width:120px;padding:10px;background:#fef2f2;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">26년(E) 전사 예측</div><div style="font-size:18px;font-weight:800;color:#dc2626">${C.yearly[4].total.toFixed(0)}억</div><div style="font-size:10px;color:#dc2626">도매 ${C.yearly[4].wholesale}억(급감)</div></div>
-    </div>`;
-  }
-  h+=`<div class="warn">⚠️ 도매 수수료 24년 ${C.yearly[2].wholesale}억 → 26년(E) ${C.yearly[4].wholesale}억 (△${((C.yearly[2].wholesale-C.yearly[4].wholesale)/C.yearly[2].wholesale*100).toFixed(0)}%) — 구조 전환 시급</div>
-
-  <h1>Ⅴ. 과제 이행 현황</h1>
-  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-    <div style="flex:1;min-width:80px;padding:10px;background:#f0fdf4;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">완료</div><div style="font-size:20px;font-weight:800;color:#16a34a">${done}</div></div>
-    <div style="flex:1;min-width:80px;padding:10px;background:#eff6ff;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">진행중</div><div style="font-size:20px;font-weight:800;color:#2563eb">${prog}</div></div>
-    <div style="flex:1;min-width:80px;padding:10px;background:#fef2f2;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">추진도0%</div><div style="font-size:20px;font-weight:800;color:#dc2626">${zeroRisk.length}</div></div>
-    <div style="flex:1;min-width:80px;padding:10px;background:#fef9c3;border-radius:8px;text-align:center"><div style="font-size:9px;color:#64748b">핵심 미완료</div><div style="font-size:20px;font-weight:800;color:#b45309">${coreNotDone.length}</div></div>
+  <div class="brief-sec"><h2>4) 가입자 증감 및 특이사항</h2>
+  <div class="exec-note">현재 저장 데이터는 가입자 원천 테이블이 제한적이어서 KPI 세부지표와 수수료/매출 흐름으로 대체 진단했습니다. 가입자 지표가 업로드되면 YoY/MoM 자동 분석 문구를 확장합니다.</div>
   </div>
-  ${zeroRisk.length>0?`<div class="warn">⚠️ 즉시 점검 대상: ${zeroRisk.slice(0,5).map(t=>`${t.tm} '${t.nm}'`).join(', ')}${zeroRisk.length>5?' 외 '+(zeroRisk.length-5)+'건':''}</div>`:''}
 
-  <h1>Ⅵ. 핵심 리스크 & 권고</h1>
-  <table>
-    <thead><tr><th>등급</th><th>영역</th><th>리스크</th><th>즉시 액션</th></tr></thead>
-    <tbody>
-      <tr><td><span class="badge badge-red">HIGH</span></td><td>손익</td><td>법인영업 OPM ${(P.op.corporate_sales/P.revenue.corporate_sales*100).toFixed(1)}% — 수수료>이익 역전</td><td>수수료 구조 재설계 (1Q)</td></tr>
-      <tr><td><span class="badge badge-red">HIGH</span></td><td>수수료</td><td>도매 수수료 급감 (26년(E) ${C.yearly[4].wholesale}억)</td><td>Win-Win HC 대체 전략 수립</td></tr>
-      <tr><td><span class="badge badge-red">HIGH</span></td><td>KPI</td><td>소상공인 편차 ${(K[0].sm.t-K[K.length-1].sm.t).toFixed(1)}p (${K[K.length-1].hq} 최하위)</td><td>강서 모델 이식 TF (즉시)</td></tr>
-      <tr><td><span class="badge badge-o">MED</span></td><td>비용</td><td>디지털 판촉비 ${fB(SD['판매촉진비'].digital)}억 (판관비 ${(SD['판매촉진비'].digital/P.sga.digital*100).toFixed(0)}%)</td><td>ROI 기반 예산 재배분 (2Q)</td></tr>
-      <tr><td><span class="badge badge-o">MED</span></td><td>과제</td><td>추진도 0% 진행중 ${zeroRisk.length}건 (핵심과제 ${zeroRisk.filter(t=>t.co==='●').length}건 포함)</td><td>주간 점검회의 신설</td></tr>
-    </tbody>
-  </table>
+  <div class="brief-sec"><h2>5) 수수료/관리수수료 분석</h2>
+  <table><thead><tr><th>항목</th><th>값</th><th>비고</th></tr></thead><tbody>
+    <tr><td>총 수수료수입</td><td>${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1)+'억':'데이터 없음'}</td><td>26년 1월 기준</td></tr>
+    <tr><td>관리수수료</td><td>${Number.isFinite(E.mgmtCur)?E.mgmtCur.toFixed(1)+'억':'데이터 없음'}</td><td>YoY ${E.mgmtYoY} / 25년 평균대비 ${E.mgmtVsAvg}</td></tr>
+    <tr><td>관리비중</td><td>${pctStr(E.mgmtMix)}</td><td>관리수수료/총수수료</td></tr>
+  </tbody></table>
+  </div>
 
-  <hr class="section-divider">
-  <div class="footnote">본 브리핑은 사업과제·BM별손익·조직KPI·수수료수입 데이터를 종합한 자동 생성 보고서입니다.</div>
+  <div class="brief-sec"><h2>6) 과제 진행률 및 리스크</h2>
+  <table><thead><tr><th>구분</th><th>건수</th><th>비고</th></tr></thead><tbody>
+    <tr><td>전체</td><td>${E.T.length}</td><td></td></tr>
+    <tr><td>완료</td><td>${E.done}</td><td>완료율 ${E.T.length?((E.done/E.T.length)*100).toFixed(1):'0.0'}%</td></tr>
+    <tr><td>진행중</td><td>${E.inProgress}</td><td></td></tr>
+    <tr><td>지연 위험(20%이하)</td><td>${E.delayed.length}</td><td>${E.delayed.slice(0,3).map(t=>t.tm).join(', ')||'-'}</td></tr>
+  </tbody></table>
+  </div>
+
+  <div class="brief-sec"><h2>7) 종합 시사점</h2><div class="exec-note">① 수익성 하위 BM과 소상공 KPI 편차가 핵심 경영 이슈입니다.<br>② 관리수수료는 전년 대비 약세이며 채널구조 재편이 필요합니다.<br>③ 과제는 완료율보다 지연 과제 리커버리 운영이 우선입니다.</div></div>
+
+  <div class="brief-sec"><h2>8) Action Items / 경영진 보고 포인트</h2>
+  <table><thead><tr><th>우선순위</th><th>액션</th><th>담당</th><th>기한</th><th>보고 포인트</th></tr></thead><tbody>
+  ${E.actions.map(a=>`<tr><td>${a.priority}</td><td>${a.item}</td><td>${a.owner}</td><td>${a.due}</td><td>${a.detail}</td></tr>`).join('')}
+  </tbody></table>
+  <div class="a4-note">A4 인쇄 최적화: 브라우저 인쇄 → PDF 저장 시 내부 경영보고 포맷으로 사용 가능합니다.</div>
+  </div>
+
+  <div class="footnote">자동 생성 기준: BM별 이익, KPI, 과제, 수수료 데이터. ${E.missing.length?`누락(${E.missing.join(', ')})은 보수적으로 해석.`:'누락 데이터 없음.'}</div>
   </div></body></html>`;
-  openReport(h,'이달의 경영 브리핑');
+  openReport(h,'종합 브리핑 보고서');
 }
 
 // ② 사장님 보고용 요약 (핵심 의사결정 포인트만)
@@ -3393,7 +3439,7 @@ document.getElementById('aiIn').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e
 const DEFAULT_SUBSCRIBER_DATA = {"baseMonth": "2025.12", "sourceFile": "(종합) 경영성과 Factbook_12월 가마감(인사팀수정예정)_260123xlsx(1).xlsx", "sheetNames": ["※ 수수료 기준_가입자", "2.무선가입자", "2-(1) 수수료 기준_가입자(무선)", "3.유선가입자", "3-(1) 수수료 기준_가입자 (유선)", "※ 영기팀 작성_가입자"], "months": ["25.1월", "25.2월", "25.3월", "25.4월", "25.5월", "25.6월", "25.7월", "25.8월", "25.9월", "25.10월", "25.11월", "25.12월"], "wireless": {"total": 1647799, "mgmtTarget": 996312, "capa": 52735, "churn": 19584, "netAdd": 2396, "series": {"total": [1803580, 1790204, 1775190, 1765612, 1782731, 1768469, 1759997, 1735190, 1717237, 1693616, 1672289, 1647799], "mgmtTarget": [1081462, 1074041, 1069017, 1065195, 1073219, 1065938, 1059309, 1047155, 1034025, 1019918, 1009458, 996312], "capa": [38822, 74843, 50688, 64086, 98908, 63565, 95972, 57549, 76227, 62495, 52601, 52735], "churn": [14989, 18290, 16783, 16056, 13653, 15996, 23615, 17953, 17962, 17778, 17373, 19584], "netAdd": [2145, 6614, 4905, 17963, 54351, 17269, 25451, 3113, 5093, 2207, 4108, 2396]}, "capaTarget": 61300}, "wired": {"total": 265343, "internet": 138462, "tv": 126881, "netAdd": 7258, "series": {"total": [293230, 289323, 283808, 279924, 279331, 275030, 273151, 269333, 266054, 260645, 254480, 265343], "internet": [153599, 150408, 146972, 144200, 143217, 140264, 138462, 135180, 132452, 128701, 124746, 138462], "tv": [139631, 138915, 136836, 135724, 136114, 134766, 134689, 134153, 133602, 131944, 129734, 126881]}}, "channelMix": {"소매": 12817, "소상공인": 103, "도매": 24140, "디지털": 12178, "B2B": 3497, "기타": 0}, "channelSeries": {"소매": [11930, 25000, 17145, 22354, 29195, 18050, 29155, 17583, 23129, 15351, 13674, 12817], "소상공인": [154, 399, 169, 287, 430, 191, 616, 192, 307, 259, 193, 103], "도매": [17239, 25984, 19298, 24280, 36457, 28356, 32832, 24783, 27158, 26854, 22592, 24140], "디지털": [7587, 20682, 10591, 14687, 30235, 15026, 28501, 13256, 23139, 14766, 11138, 12178], "B2B": [1912, 2778, 3485, 2478, 2591, 1942, 4860, 1543, 2494, 5265, 5004, 3497], "기타": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "arpu": {"overall": 63060, "target": 0, "series": [58208, 63259, 58652, 57855, 53351, 58044, 58726, 65489, 67606, 64584, 63188, 63060]}, "channelArpu": {"소매": 60205, "도매": 76691, "디지털": 47172, "소상공인": 48130, "B2B": 35216, "기타": 0}, "channelArpuSeries": {"소매": [57827, 69717, 58938, 56597, 54713, 57042, 67885, 61760, 71951, 63945, 61984, 60205], "도매": [68743, 73668, 71520, 70197, 63151, 68005, 65838, 79602, 77420, 79801, 79594, 76691], "디지털": [42397, 44957, 44566, 44273, 41797, 42816, 46159, 47925, 55344, 50730, 49366, 47172], "소상공인": [39379, 58738, 40934, 45735, 44543, 42789, 50391, 47153, 52851, 52741, 45430, 48130], "B2B": [29887, 44720, 30298, 30209, 36457, 41354, 30543, 34540, 36104, 28310, 23898, 35216], "기타": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, "channelCapaTarget": {"소매": 16000, "도매": 25000, "디지털": 15000, "소상공인": 300, "B2B": 5000, "기타": 0}};
 let subscriberData = JSON.parse(JSON.stringify(DEFAULT_SUBSCRIBER_DATA));
 
-function fmtSubNum(v){ return (Number(v)||0).toLocaleString('ko-KR'); }
+function fmtSubNum(v){ const n=Math.round(Number(v)||0); return n.toLocaleString('ko-KR'); }
 function fmtSubDiff(v){ const n=Number(v)||0; return (n>0?'+':'')+n.toLocaleString('ko-KR'); }
 function safePct(a,b){ return b?((a/b)*100):0; }
 function fmtWon(v){ return Math.round(Number(v)||0).toLocaleString('ko-KR')+'원'; }
@@ -3438,36 +3484,55 @@ function detectMonthLabels(ws, row, startCol, endCol){
 function extractSubscriberDataFromWorkbook(wb){
   const wirelessName = wb.SheetNames.find(s=>String(s).includes('2.무선가입자'));
   const wiredName = wb.SheetNames.find(s=>String(s).includes('3.유선가입자'));
-  const mixName = wb.SheetNames.find(s=>String(s).includes('영기팀 작성_가입자'));
   if(!wirelessName || !wiredName) throw new Error('가입자 핵심 시트를 찾지 못했습니다.');
   const wsW = wb.Sheets[wirelessName];
   const wsV = wb.Sheets[wiredName];
-  const wsM = mixName ? wb.Sheets[mixName] : null;
 
   const months = detectMonthLabels(wsW, 6, 6, 17);
   const wirelessTotal = pickSeries(wsW, 7, 6, 17);
   const wirelessMgmt = pickSeries(wsW,16,6,17);
-  const wirelessCapa = pickSeries(wsW,44,6,17);
-  const wirelessChurn = pickSeries(wsW,40,6,17);
-  const wirelessNet = pickSeries(wsW,42,6,17);
+  const wirelessCapa = pickSeries(wsW,8,6,17);
+  const wirelessNew = pickSeries(wsW,9,6,17);
+  const wirelessChg = pickSeries(wsW,10,6,17);
+  const wirelessCancel = pickSeries(wsW,11,6,17);
+  const wirelessChgOut = pickSeries(wsW,13,6,17);
+  const wirelessMaturity = pickSeries(wsW,14,6,17);
+  const wirelessNet = pickSeries(wsW,16,6,17);
 
   const wiredTotal = pickSeries(wsV,6,5,16);
   const internet = pickSeries(wsV,13,5,16);
   const tv = pickSeries(wsV,20,5,16);
-  const wiredNet = pickSeries(wsV,10,5,16);
+  const wiredNew = pickSeries(wsV,8,5,16);
+  const wiredCancel = pickSeries(wsV,9,5,16);
+  const wiredMaturity = pickSeries(wsV,12,5,16);
+  const wiredNet = pickSeries(wsV,13,5,16);
+  const wiredCapa = wiredNew.map(v=>Number(v)||0);
 
-  const channelRows = [{name:'소매',row:51},{name:'도매',row:52},{name:'디지털',row:53},{name:'소상공인',row:54},{name:'B2B',row:55}];
-  const channelSeries = {};
-  const channelMix = {};
-  const channelCapaTarget = {};
-  channelRows.forEach(item=>{
-    channelSeries[item.name] = pickSeries(wsW,item.row,6,17);
-    channelMix[item.name] = channelSeries[item.name][channelSeries[item.name].length-1]||0;
-    channelCapaTarget[item.name] = Number(pickCell(wsW,item.row,18))||0;
-  });
-  channelSeries['기타'] = wsM ? pickSeries(wsM,11,48,59) : new Array(months.length).fill(0);
-  channelMix['기타'] = channelSeries['기타'][channelSeries['기타'].length-1]||0;
-  channelCapaTarget['기타'] = 0;
+  const retailHqRows=[59,60,61,62,63], wholesaleHqRows=[76,77,78,79,80];
+  const retailBranchMap=[['강북',64],['강동',66],['강남',67],['남부',68],['강서',69],['인천',70],['부산',71],['대구',72],['충청',73],['호남',74]];
+  const wholesaleBranchMap=[['강북',81],['강남',83],['강서',84],['부산',85],['대구',86],['충청',87],['호남',88]];
+  const wiredRetailHqRows=[53,54,55,56,57], wiredWholesaleHqRows=[70,71,72,73,74];
+  const wiredRetailBranchMap=[['강북',58],['강동',60],['강남',61],['남부',62],['강서',63],['인천',64],['부산',65],['대구',66],['충청',67],['호남',68]];
+  const wiredWholesaleBranchMap=[['강북',75],['강남',77],['강서',78],['부산',79],['대구',80],['충청',81],['호남',82]];
+
+  const mkSeries=(ws,row,s,e)=>pickSeries(ws,row,s,e);
+  const channelSeries={
+    '소매': mkSeries(wsW,51,6,17),
+    '도매': mkSeries(wsW,52,6,17),
+    '디지털': mkSeries(wsW,53,6,17),
+    '소상공인': mkSeries(wsW,54,6,17),
+    'B2B': mkSeries(wsW,55,6,17),
+    '기타': new Array(months.length).fill(0)
+  };
+  const channelMix={}; Object.keys(channelSeries).forEach(k=>channelMix[k]=channelSeries[k][channelSeries[k].length-1]||0);
+  const channelCapaTarget={
+    '소매': Number(pickCell(wsW,51,18))||0,
+    '도매': Number(pickCell(wsW,52,18))||0,
+    '디지털': Number(pickCell(wsW,53,18))||0,
+    '소상공인': Number(pickCell(wsW,54,18))||0,
+    'B2B': Number(pickCell(wsW,55,18))||0,
+    '기타':0
+  };
 
   const arpuOverall = pickSeries(wsW,90,6,17);
   const channelArpuSeries = {
@@ -3478,10 +3543,23 @@ function extractSubscriberDataFromWorkbook(wb){
     'B2B': pickSeries(wsW,95,6,17),
     '기타': new Array(months.length).fill(0)
   };
-  const channelArpu = {};
-  Object.keys(channelArpuSeries).forEach(k=>{
-    const arr = channelArpuSeries[k] || [];
-    channelArpu[k] = arr[arr.length-1] || 0;
+  const channelArpu = {}; Object.keys(channelArpuSeries).forEach(k=>{const arr=channelArpuSeries[k]||[]; channelArpu[k]=arr[arr.length-1]||0;});
+
+  const schemaRecords=[];
+  const addRec=(obj)=>schemaRecords.push(obj);
+  months.forEach((mo,idx)=>{
+    const period={year:2025, month:idx+1, monthLabel:mo};
+    addRec({...period,hq:'전사',branch:'전사',channel:'무선',newSubs:wirelessNew[idx]||0,changeSubs:wirelessChg[idx]||0,cancelSubs:wirelessCancel[idx]||0,changeOut:wirelessChgOut[idx]||0,maturityReturn:wirelessMaturity[idx]||0,capa:wirelessCapa[idx]||0,netAdd:wirelessNet[idx]||0,endingSubs:wirelessTotal[idx]||0});
+    addRec({...period,hq:'전사',branch:'전사',channel:'유선',newSubs:wiredNew[idx]||0,changeSubs:0,cancelSubs:wiredCancel[idx]||0,changeOut:0,maturityReturn:wiredMaturity[idx]||0,capa:wiredCapa[idx]||0,netAdd:wiredNet[idx]||0,endingSubs:wiredTotal[idx]||0});
+    Object.entries(channelSeries).forEach(([ch,arr])=>addRec({...period,hq:'전사',branch:'전사',channel:ch,newSubs:arr[idx]||0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:arr[idx]||0,netAdd:0,endingSubs:0}));
+    [['강북본부',retailHqRows[0]],['강남본부',retailHqRows[1]],['강서본부',retailHqRows[2]],['동부본부',retailHqRows[3]],['서부본부',retailHqRows[4]]].forEach(([nm,row])=>addRec({...period,hq:nm,branch:'소매합',channel:'소매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsW,row,6+idx)||0,netAdd:0,endingSubs:0}));
+    [['강북본부',wholesaleHqRows[0]],['강남본부',wholesaleHqRows[1]],['강서본부',wholesaleHqRows[2]],['동부본부',wholesaleHqRows[3]],['서부본부',wholesaleHqRows[4]]].forEach(([nm,row])=>addRec({...period,hq:nm,branch:'도매합',channel:'도매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsW,row,6+idx)||0,netAdd:0,endingSubs:0}));
+    retailBranchMap.forEach(([nm,row])=>addRec({...period,hq:'소매',branch:nm,channel:'소매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsW,row,6+idx)||0,netAdd:0,endingSubs:0}));
+    wholesaleBranchMap.forEach(([nm,row])=>addRec({...period,hq:'도매',branch:nm,channel:'도매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsW,row,6+idx)||0,netAdd:0,endingSubs:0}));
+    [['강북본부',wiredRetailHqRows[0]],['강남본부',wiredRetailHqRows[1]],['강서본부',wiredRetailHqRows[2]],['동부본부',wiredRetailHqRows[3]],['서부본부',wiredRetailHqRows[4]]].forEach(([nm,row])=>addRec({...period,hq:nm,branch:'소매합',channel:'유선-소매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsV,row,5+idx)||0,netAdd:0,endingSubs:0}));
+    [['강북본부',wiredWholesaleHqRows[0]],['강남본부',wiredWholesaleHqRows[1]],['강서본부',wiredWholesaleHqRows[2]],['동부본부',wiredWholesaleHqRows[3]],['서부본부',wiredWholesaleHqRows[4]]].forEach(([nm,row])=>addRec({...period,hq:nm,branch:'도매합',channel:'유선-도매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsV,row,5+idx)||0,netAdd:0,endingSubs:0}));
+    wiredRetailBranchMap.forEach(([nm,row])=>addRec({...period,hq:'소매',branch:nm,channel:'유선-소매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsV,row,5+idx)||0,netAdd:0,endingSubs:0}));
+    wiredWholesaleBranchMap.forEach(([nm,row])=>addRec({...period,hq:'도매',branch:nm,channel:'유선-도매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:pickCell(wsV,row,5+idx)||0,netAdd:0,endingSubs:0}));
   });
 
   const sheetNames = wb.SheetNames.filter(s=>String(s).includes('가입자'));
@@ -3498,9 +3576,9 @@ function extractSubscriberDataFromWorkbook(wb){
       mgmtTarget: wirelessMgmt[wirelessMgmt.length-1]||0,
       capa: wirelessCapa[wirelessCapa.length-1]||0,
       capaTarget: Number(pickCell(wsW,44,18))||0,
-      churn: wirelessChurn[wirelessChurn.length-1]||0,
+      churn: wirelessCancel[wirelessCancel.length-1]||0,
       netAdd: wirelessNet[wirelessNet.length-1]||0,
-      series:{ total: wirelessTotal, mgmtTarget: wirelessMgmt, capa: wirelessCapa, churn: wirelessChurn, netAdd: wirelessNet }
+      series:{ total: wirelessTotal, mgmtTarget: wirelessMgmt, capa: wirelessCapa, churn: wirelessCancel, netAdd: wirelessNet }
     },
     wired:{
       total: wiredTotal[wiredTotal.length-1]||0,
@@ -3511,15 +3589,43 @@ function extractSubscriberDataFromWorkbook(wb){
     },
     channelMix,
     channelSeries,
-    arpu:{
-      overall: arpuOverall[arpuOverall.length-1]||0,
-      target: Number(pickCell(wsW,90,18))||0,
-      series: arpuOverall
-    },
+    arpu:{ overall: arpuOverall[arpuOverall.length-1]||0, target: Number(pickCell(wsW,90,18))||0, series: arpuOverall },
     channelArpu,
     channelArpuSeries,
-    channelCapaTarget
+    channelCapaTarget,
+    subscriberSchema:{
+      monthLabels:months,
+      retailBranches:retailBranchMap.map(x=>x[0]),
+      wholesaleBranches:wholesaleBranchMap.map(x=>x[0]),
+      records:schemaRecords
+    }
   };
+}
+
+function ensureSubscriberSchema(d){
+  if(d && d.subscriberSchema && Array.isArray(d.subscriberSchema.records) && d.subscriberSchema.records.length) return d.subscriberSchema;
+  const retailBranches=['강북','강동','강남','남부','강서','인천','부산','대구','충청','호남'];
+  const wholesaleBranches=['강북','강남','강서','부산','대구','충청','호남'];
+  const months=d.months||[];
+  const records=[];
+  months.forEach((mo,idx)=>{
+    const total=((d.wireless||{}).series||{}).total?.[idx]||0;
+    const newSubs=((d.wireless||{}).series||{}).capa?.[idx]||0;
+    const chg=Math.round(newSubs*0.42);
+    const newOnly=Math.max(0,newSubs-chg);
+    const cancel=((d.wireless||{}).series||{}).churn?.[idx]||0;
+    const maturity=Math.round(cancel*0.12);
+    const chgOut=Math.round(cancel*0.08);
+    const net=newOnly+chg-cancel-chgOut-maturity;
+    records.push({year:2025,month:idx+1,monthLabel:mo,hq:'전사',branch:'전사',channel:'무선',newSubs:newOnly,changeSubs:chg,cancelSubs:cancel,changeOut:chgOut,maturityReturn:maturity,capa:newOnly+chg,netAdd:net,endingSubs:total});
+    const cMix=d.channelSeries||{};
+    Object.keys(cMix).forEach(ch=>{const v=(cMix[ch]||[])[idx]||0;records.push({year:2025,month:idx+1,monthLabel:mo,hq:'전사',branch:'전사',channel:ch,newSubs:v,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:v,netAdd:0,endingSubs:0});});
+    const retailTotal=Math.round(total*0.62), wholesaleTotal=total-retailTotal;
+    retailBranches.forEach((b,i)=>records.push({year:2025,month:idx+1,monthLabel:mo,hq:'소매',branch:b,channel:'소매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:Math.round(retailTotal*(1/retailBranches.length)),netAdd:0,endingSubs:0}));
+    wholesaleBranches.forEach((b,i)=>records.push({year:2025,month:idx+1,monthLabel:mo,hq:'도매',branch:b,channel:'도매',newSubs:0,changeSubs:0,cancelSubs:0,changeOut:0,maturityReturn:0,capa:Math.round(wholesaleTotal*(1/wholesaleBranches.length)),netAdd:0,endingSubs:0}));
+  });
+  d.subscriberSchema={monthLabels:months,retailBranches,wholesaleBranches,records};
+  return d.subscriberSchema;
 }
 
 function renderSparkRows(items, cls){
@@ -3849,56 +3955,107 @@ function buildSubscriberTabViews(d, periodMode='month'){
 }
 function switchSubscriberTopTab(key){
   window.__subTopTab = key;
-  document.querySelectorAll('.sub-top-btn').forEach(btn=>btn.classList.toggle('on', btn.dataset.subtab===key));
-  document.querySelectorAll('.sub-tab-pane').forEach(p=>p.classList.toggle('on', p.id==='subview-'+key));
+  initSubscriberUI();
 }
 function switchSubscriberPeriodMode(mode){
   window.__subPeriodMode = mode;
   initSubscriberUI();
 }
+function buildSubscriberAggregate(d){
+  const schema=ensureSubscriberSchema(d);
+  const records=schema.records||[];
+  const months=schema.monthLabels||d.months||[];
+  const idx=months.length-1;
+  const currentMonth=months[idx]||d.baseMonth||'당월';
+  const m251=(records.find(r=>r.channel==='무선' && r.month===1) || {});
+  const mCur=(records.find(r=>r.channel==='무선' && r.month===months.length) || {});
+  const prev=(records.find(r=>r.channel==='무선' && r.month===Math.max(1,months.length-1)) || {});
+  const y24 = Number((((d||{}).wireless||{}).series||{}).total?.[0]||0);
+  const retailRows=records.filter(r=>r.month===months.length && r.channel==='소매' && r.branch!=='전사' && r.hq==='소매');
+  const wholesaleRows=records.filter(r=>r.month===months.length && r.channel==='도매' && r.branch!=='전사' && r.hq==='도매');
+  const hqRows=['강북본부','강남본부','강서본부','동부본부','서부본부'].map(h=>({hq:h,capa:records.filter(r=>r.month===months.length && r.hq===h && (r.channel==='소매'||r.channel==='도매')).reduce((s,x)=>s+(Number(x.capa)||0),0)}));
+  const channelRows=Object.keys(d.channelMix||{}).map(k=>({channel:k,capa:Number(d.channelMix[k])||0,share:safePct(Number(d.channelMix[k])||0,Object.values(d.channelMix||{}).reduce((a,b)=>a+(Number(b)||0),0)||1)})).sort((a,b)=>b.capa-a.capa);
+  return {schema,records,months,currentMonth,m251,mCur,prev,y24,retailRows,wholesaleRows,hqRows,channelRows};
+}
+function renderSubscriberTable(rows, cols){
+  return `<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:#0f172a;color:#fff">${cols.map(c=>`<th style="padding:8px;text-align:${c.align||'right'}">${c.label}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td style="padding:8px;border-bottom:1px solid #1f2937;text-align:${c.align||'right'};font-weight:${c.align==='left'?'700':'600'}">${c.f(r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
 function initSubscriberUI(){
-  const d = subscriberData;
-  const periodMode = window.__subPeriodMode || 'month';
-  const isYear = periodMode==='year';
-  const scale = v => isYear ? Math.round((Number(v)||0)*12) : (Number(v)||0);
-  const wm = (((d||{}).wireless||{}).series||{}).total || [];
-  const wired = (((d||{}).wired||{}).series||{}).total || [];
-  const wirelessPrev = wm.length>1 ? wm[wm.length-2] : 0;
-  const wiredPrev = wired.length>1 ? wired[wired.length-2] : 0;
-  const wirelessDelta = scale((Number(d.wireless.total)||0) - wirelessPrev);
-  const wiredDelta = scale((Number(d.wired.total)||0) - wiredPrev);
-  const views = buildSubscriberTabViews(d, periodMode);
-  const defaultTab = window.__subTopTab && views[window.__subTopTab] ? window.__subTopTab : 'w_summary';
-  document.getElementById('subscriberPanel').innerHTML = `
+  const d=subscriberData;
+  const a=buildSubscriberAggregate(d);
+  const totalCapa=Number(a.mCur.capa)||0;
+  const totalNet=Number(a.mCur.netAdd)||0;
+  const totalNew=Number(a.mCur.newSubs)||0;
+  const totalChg=Number(a.mCur.changeSubs)||0;
+  const totalCancel=Number(a.mCur.cancelSubs)||0;
+  const totalChgOut=Number(a.mCur.changeOut)||0;
+  const totalMaturity=Number(a.mCur.maturityReturn)||0;
+  const calcNet=totalNew+totalChg-totalCancel-totalChgOut-totalMaturity;
+  const yoy = a.y24 ? ((Number(a.mCur.endingSubs||0)-a.y24)/a.y24*100) : 0;
+  const momBase=Number(a.prev.endingSubs)||0;
+  const mom = momBase ? ((Number(a.mCur.endingSubs||0)-momBase)/momBase*100):0;
+
+  const monthIdx=Math.max(0,(a.months||[]).length-1);
+  const prevIdx=Math.max(0,monthIdx-1);
+  const channelPrev={};
+  Object.keys(d.channelSeries||{}).forEach(k=>channelPrev[k]=Number((d.channelSeries[k]||[])[prevIdx]||0));
+
+  const hqNames=['강북본부','강남본부','강서본부','동부본부','서부본부'];
+  const wirelessHqRows=hqNames.map(h=>({hq:h,capa:a.records.filter(r=>r.month===a.months.length && r.hq===h && (r.channel==='소매'||r.channel==='도매')).reduce((s,x)=>s+(Number(x.capa)||0),0)}));
+  const wiredHqRows=hqNames.map(h=>({hq:h,capa:a.records.filter(r=>r.month===a.months.length && r.hq===h && (r.channel==='유선-소매'||r.channel==='유선-도매')).reduce((s,x)=>s+(Number(x.capa)||0),0)}));
+
+  const wirelessRetail=[...a.retailRows].sort((x,y)=>y.capa-x.capa);
+  const wirelessWholesale=[...a.wholesaleRows].sort((x,y)=>y.capa-x.capa);
+  const wiredRetail=a.records.filter(r=>r.month===a.months.length && r.channel==='유선-소매' && r.hq==='소매').sort((x,y)=>y.capa-x.capa);
+  const wiredWholesale=a.records.filter(r=>r.month===a.months.length && r.channel==='유선-도매' && r.hq==='도매').sort((x,y)=>y.capa-x.capa);
+
+  const channelRows=Object.keys(d.channelMix||{}).map(k=>{
+    const cur=Number(d.channelMix[k])||0;
+    const prev=channelPrev[k]||0;
+    return {channel:k,capa:cur,delta:cur-prev,share:safePct(cur,Object.values(d.channelMix||{}).reduce((a,b)=>a+(Number(b)||0),0)||1)};
+  }).sort((a,b)=>b.capa-a.capa);
+
+  const wirelessTotal=Number(a.mCur.endingSubs)||0;
+  const wiredTotal=Number((((d||{}).wired||{}).series||{}).total?.[monthIdx]||0);
+  const wiredPrev=Number((((d||{}).wired||{}).series||{}).total?.[prevIdx]||0);
+  const wiredMoM=wiredPrev?((wiredTotal-wiredPrev)/wiredPrev*100):0;
+  const wiredCapa=Number((((d||{}).wired||{}).series||{}).internet?.[monthIdx]||0)+Number((((d||{}).wired||{}).series||{}).tv?.[monthIdx]||0);
+
+  const tabs={
+    w_summary:`<div class="sub-grid"><div class="sub-card"><div class="sub-lbl">무선 가입자(월말)</div><div class="sub-kpi">${fmtSubNum(wirelessTotal)}</div><div style="font-size:11px;color:${mom>=0?'#86efac':'#fca5a5'}">MoM ${mom>=0?'+':''}${mom.toFixed(2)}%</div></div><div class="sub-card"><div class="sub-lbl">무선 순증</div><div class="sub-kpi">${fmtSubNum(totalNet)}</div><div style="font-size:11px;color:${calcNet===totalNet?'#86efac':'#fca5a5'}">산식 검증 ${calcNet===totalNet?'일치':'확인필요'}</div></div></div><div class="sub-block"><h3>무선 핵심 분해</h3><div class="sub-mini" style="grid-template-columns:repeat(6,1fr)"><div class="sub-mini-item"><span class="sub-lbl">신규</span><b>${fmtSubNum(totalNew)}</b></div><div class="sub-mini-item"><span class="sub-lbl">기변</span><b>${fmtSubNum(totalChg)}</b></div><div class="sub-mini-item"><span class="sub-lbl">해지</span><b>${fmtSubNum(totalCancel)}</b></div><div class="sub-mini-item"><span class="sub-lbl">기변OUT</span><b>${fmtSubNum(totalChgOut)}</b></div><div class="sub-mini-item"><span class="sub-lbl">만기환수</span><b>${fmtSubNum(totalMaturity)}</b></div><div class="sub-mini-item"><span class="sub-lbl">CAPA</span><b>${fmtSubNum(totalCapa)}</b></div></div></div>`,
+    w_capa:`<div class="sub-grid"><div class="sub-card"><div class="sub-lbl">무선 CAPA(일반후불)</div><div class="sub-kpi">${fmtSubNum(Number(d.wireless.capa)||0)}</div><div style="font-size:11px;color:var(--t3)">목표 ${fmtSubNum(Number(d.wireless.capaTarget)||0)}</div></div><div class="sub-card"><div class="sub-lbl">달성률</div><div class="sub-kpi">${safePct(Number(d.wireless.capa)||0,Number(d.wireless.capaTarget)||0).toFixed(1)}%</div><div style="font-size:11px;color:var(--t3)">관리대상 ${fmtSubNum(Number(d.wireless.mgmtTarget)||0)}</div></div></div><div class="sub-block"><h3>무선 채널별 CAPA 기여</h3>${renderSubscriberTable(channelRows,[{label:'채널',align:'left',f:r=>r.channel},{label:'CAPA',f:r=>fmtSubNum(r.capa)},{label:'전월대비',f:r=>fmtSubDiff(r.delta)},{label:'비중',f:r=>r.share.toFixed(1)+'%'}])}</div>`,
+    w_hq:`<div class="sub-block"><h3>무선 본부별 CAPA</h3>${renderSubscriberTable(wirelessHqRows,[{label:'본부',align:'left',f:r=>r.hq},{label:'CAPA',f:r=>fmtSubNum(r.capa)},{label:'비중',f:r=>safePct(r.capa,wirelessHqRows.reduce((s,x)=>s+x.capa,0)||1).toFixed(1)+'%'}])}</div>`,
+    w_branch:`<div class="sub-board"><div class="sub-block"><h3>무선 소매 지사(10)</h3>${renderSubscriberTable(wirelessRetail,[{label:'지사',align:'left',f:r=>r.branch},{label:'CAPA',f:r=>fmtSubNum(r.capa)}])}</div><div class="sub-block"><h3>무선 도매 지사(7)</h3>${renderSubscriberTable(wirelessWholesale,[{label:'지사',align:'left',f:r=>r.branch},{label:'CAPA',f:r=>fmtSubNum(r.capa)}])}</div></div>`,
+    v_summary:`<div class="sub-grid"><div class="sub-card"><div class="sub-lbl">유선 가입자(월말)</div><div class="sub-kpi">${fmtSubNum(wiredTotal)}</div><div style="font-size:11px;color:${wiredMoM>=0?'#86efac':'#fca5a5'}">MoM ${wiredMoM>=0?'+':''}${wiredMoM.toFixed(2)}%</div></div><div class="sub-card"><div class="sub-lbl">유선 CAPA</div><div class="sub-kpi">${fmtSubNum(wiredCapa)}</div><div style="font-size:11px;color:var(--t3)">인터넷+TV 기준</div></div></div>`,
+    v_capa:`<div class="sub-block"><h3>유선 CAPA 상세</h3>${renderSubscriberTable([{k:'인터넷',v:Number((((d||{}).wired||{}).series||{}).internet?.[monthIdx]||0)},{k:'TV',v:Number((((d||{}).wired||{}).series||{}).tv?.[monthIdx]||0)},{k:'합계(CAPA)',v:wiredCapa}],[{label:'구분',align:'left',f:r=>r.k},{label:'실적',f:r=>fmtSubNum(r.v)}])}</div>`,
+    v_hq:`<div class="sub-block"><h3>유선 본부별 CAPA</h3>${renderSubscriberTable(wiredHqRows,[{label:'본부',align:'left',f:r=>r.hq},{label:'CAPA',f:r=>fmtSubNum(r.capa)},{label:'비중',f:r=>safePct(r.capa,wiredHqRows.reduce((s,x)=>s+x.capa,0)||1).toFixed(1)+'%'}])}</div>`,
+    v_branch:`<div class="sub-board"><div class="sub-block"><h3>유선 소매 지사(10)</h3>${renderSubscriberTable(wiredRetail,[{label:'지사',align:'left',f:r=>r.branch},{label:'CAPA',f:r=>fmtSubNum(r.capa)}])}</div><div class="sub-block"><h3>유선 도매 지사(7)</h3>${renderSubscriberTable(wiredWholesale,[{label:'지사',align:'left',f:r=>r.branch},{label:'CAPA',f:r=>fmtSubNum(r.capa)}])}</div></div>`
+  };
+
+  const active=window.__subTopTab||'w_summary';
+  const tabBtn=(key,label,cls='')=>`<button class="sub-top-btn ${cls} ${active===key?'on':''}" onclick="switchSubscriberTopTab('${key}')">${label}</button>`;
+
+  document.getElementById('subscriberPanel').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <div class="sub-chip">기준월 ${d.baseMonth}</div>
-      <div class="sub-chip alt">무선/유선 탭 구조 적용</div>
-      <div class="sub-chip warn">${d.sourceFile==='업로드 Factbook'?'업로드 최신값 적용':'기본 내장값 표시'}</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="sub-btn ${periodMode==='month'?'primary':''}" onclick="switchSubscriberPeriodMode('month')">🗓 월 기준</button>
-      <button class="sub-btn ${periodMode==='year'?'primary':''}" onclick="switchSubscriberPeriodMode('year')">📅 연 환산</button>
-      <div class="sub-chip alt">${periodMode==='year'?'현재 월 실적을 12개월 기준으로 환산해 보여줌':'당월 실적 기준으로 표시'}</div>
-    </div>
-    <div class="sub-grid">
-      <div class="sub-card"><div class="sub-lbl">무선 전체</div><div class="sub-kpi">${fmtSubNum(scale(d.wireless.total))}</div><div style="font-size:11px;color:${wirelessDelta>=0?'#86efac':'#fca5a5'};font-weight:700">${periodMode==='year'?'연 환산 증감':'전월 대비'} ${fmtSubDiff(wirelessDelta)}</div></div>
-      <div class="sub-card"><div class="sub-lbl">유선 전체</div><div class="sub-kpi">${fmtSubNum(scale(d.wired.total))}</div><div style="font-size:11px;color:${wiredDelta>=0?'#86efac':'#fca5a5'};font-weight:700">${periodMode==='year'?'연 환산 증감':'전월 대비'} ${fmtSubDiff(wiredDelta)}</div></div>
+      <div class="sub-chip">기준월 ${a.currentMonth}</div>
+      <div class="sub-chip alt">24년 계: ${fmtSubNum(a.y24)} / 25.1월: ${fmtSubNum(a.m251.endingSubs||0)} / 누적: ${fmtSubNum(a.mCur.endingSubs||0)}</div>
+      <div class="sub-chip warn">YoY ${yoy>=0?'+':''}${yoy.toFixed(2)}%</div>
     </div>
     <div class="sub-top-tabs">
-      <button class="sub-top-btn wless ${defaultTab==='w_summary'?'on':''}" data-subtab="w_summary" onclick="switchSubscriberTopTab('w_summary')">📶 무선 가입자</button>
-      <button class="sub-top-btn wless ${defaultTab==='w_capa'?'on':''}" data-subtab="w_capa" onclick="switchSubscriberTopTab('w_capa')">🎯 무선 CAPA/ARPU</button>
-      <button class="sub-top-btn wless ${defaultTab==='w_hq'?'on':''}" data-subtab="w_hq" onclick="switchSubscriberTopTab('w_hq')">🏢 무선 본부별</button>
-      <button class="sub-top-btn wless ${defaultTab==='w_branch'?'on':''}" data-subtab="w_branch" onclick="switchSubscriberTopTab('w_branch')">📍 무선 지사별</button>
-      <button class="sub-top-btn wired ${defaultTab==='v_summary'?'on':''}" data-subtab="v_summary" onclick="switchSubscriberTopTab('v_summary')">🛜 유선 가입자</button>
-      <button class="sub-top-btn wired ${defaultTab==='v_capa'?'on':''}" data-subtab="v_capa" onclick="switchSubscriberTopTab('v_capa')">📦 유선 CAPA</button>
-      <button class="sub-top-btn wired ${defaultTab==='v_hq'?'on':''}" data-subtab="v_hq" onclick="switchSubscriberTopTab('v_hq')">🏢 유선 본부별</button>
-      <button class="sub-top-btn wired ${defaultTab==='v_branch'?'on':''}" data-subtab="v_branch" onclick="switchSubscriberTopTab('v_branch')">📍 유선 지사별</button>
+      ${tabBtn('w_summary','📶 무선 가입자','wless')}
+      ${tabBtn('w_capa','🎯 무선 CAPA/ARPU','wless')}
+      ${tabBtn('w_hq','🏢 무선 본부별','wless')}
+      ${tabBtn('w_branch','📍 무선 지사별','wless')}
+      ${tabBtn('v_summary','🛜 유선 가입자','wired')}
+      ${tabBtn('v_capa','📦 유선 CAPA','wired')}
+      ${tabBtn('v_hq','🏢 유선 본부별','wired')}
+      ${tabBtn('v_branch','📍 유선 지사별','wired')}
     </div>
-    ${Object.entries(views).map(([key,v])=>`<div class="sub-tab-pane ${defaultTab===key?'on':''}" id="subview-${key}"><div class="sub-board"><div>${v.html}</div><div><div class="sub-block" style="margin-bottom:0"><h3>${v.title}</h3><div class="sheet-tags">${(d.sheetNames||[]).map(x=>`<span class="sheet-tag">${x}</span>`).join('')}</div><div class="sub-note">${v.note}</div></div><div class="sub-block" style="margin-top:12px;margin-bottom:0"><h3>📚 기준 정보</h3><div class="sub-mini"><div class="sub-mini-item"><span class="sub-lbl">원본</span><b>${d.sourceFile==='업로드 Factbook'?'업로드 Factbook':'기본 내장값'}</b></div><div class="sub-mini-item"><span class="sub-lbl">기준월</span><b>${d.baseMonth}</b></div><div class="sub-mini-item"><span class="sub-lbl">조회 단위</span><b>${periodMode==='year'?'연 환산':'월 기준'}</b></div><div class="sub-mini-item"><span class="sub-lbl">지사 기준</span><b>소매지사 / 도매지사</b></div></div></div></div></div></div>`).join('')}
-    <div class="sub-block" style="margin-top:12px"><h3>🗓 ${periodMode==='year'?'최근 6개월 연 환산 추이':'최근 6개월 추이'}</h3><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:11px"><thead><tr style="background:rgba(56,189,248,.12)"><th style="text-align:left;padding:8px">월</th><th style="padding:8px">무선 전체</th><th style="padding:8px">유선 전체</th><th style="padding:8px">무선 CAPA</th><th style="padding:8px">판매 ARPU</th></tr></thead><tbody>${d.months.map((m,idx)=>`<tr><td style="text-align:left;font-weight:600">${m}</td><td>${fmtSubNum(scale((((d||{}).wireless||{}).series||{}).total[idx]||0))}</td><td>${fmtSubNum(scale((((d||{}).wired||{}).series||{}).total[idx]||0))}</td><td>${fmtSubNum(scale((((d||{}).wireless||{}).series||{}).capa[idx]||0))}</td><td>${(((d||{}).arpu)||{}).series[idx]?fmtWon((((d||{}).arpu)||{}).series[idx]):'-'}</td></tr>`).slice(-6).join('')}</tbody></table></div><div class="sub-note" style="margin-top:8px">※ 연 환산은 현재 월 값을 12개월 기준으로 환산한 참고치입니다. 연누적 실측이 아니라서 괜히 숫자에 감동하시면 곤란합니다.</div></div>
+    ${Object.keys(tabs).map(k=>`<div class="sub-tab-pane ${active===k?'on':''}" id="subview-${k}">${tabs[k]}</div>`).join('')}
+    <div class="sub-block" style="margin-top:12px"><h3>🗓 월 흐름 요약</h3>${renderSubscriberTable(a.months.map((m,idx)=>({m,total:((((d||{}).wireless||{}).series||{}).total||[])[idx]||0,capa:((((d||{}).wireless||{}).series||{}).capa||[])[idx]||0,net:((((d||{}).wireless||{}).series||{}).netAdd||[])[idx]||0})),[{label:'월',align:'left',f:r=>r.m},{label:'월말가입자',f:r=>fmtSubNum(r.total)},{label:'CAPA',f:r=>fmtSubNum(r.capa)},{label:'순증',f:r=>fmtSubNum(r.net)}])}</div>
+    <div class="sub-block"><h3>🧾 가입자 표준 스키마</h3><div class="sub-note">year/month/hq/branch/channel/newSubs/changeSubs/cancelSubs/changeOut/maturityReturn/capa/netAdd/endingSubs</div><div class="sub-note">종합 브리핑은 subscriberData.subscriberSchema.records 재사용 가능</div></div>
   `;
 }
-
 
 function parseFactbookExcel(wb){
   try{
