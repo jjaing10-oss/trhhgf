@@ -20,7 +20,10 @@ function switchTab(btn){
   document.querySelectorAll('.bni').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.pnl').forEach(x=>x.classList.remove('on'));
   const activeBtn = typeof btn === 'string' ? document.querySelector(`.bni[data-t="${t}"]`) : btn;
-  if(activeBtn) activeBtn.classList.add('on');
+  if(activeBtn){
+    activeBtn.classList.add('on');
+    activeBtn.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+  }
   const panel = document.getElementById('t-'+t);
   if(panel) panel.classList.add('on');
   try{
@@ -35,6 +38,37 @@ function forceOpenCommissionTab(){
   const btn = document.querySelector('.bni[data-t="commission"]');
   switchTab(btn || 'commission');
 }
+(function initBottomNavDragScroll(){
+  const nav = document.querySelector('.bnav');
+  if(!nav) return;
+  let isDown = false;
+  let moved = false;
+  let startX = 0;
+  let startScrollLeft = 0;
+  nav.addEventListener('mousedown', e=>{
+    if(e.button!==0) return;
+    isDown = true;
+    moved = false;
+    nav.classList.add('dragging');
+    startX = e.pageX;
+    startScrollLeft = nav.scrollLeft;
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!isDown) return;
+    const walk = e.pageX - startX;
+    if(Math.abs(walk)>4) moved = true;
+    nav.scrollLeft = startScrollLeft - walk;
+  });
+  const endDrag=()=>{ isDown = false; nav.classList.remove('dragging'); };
+  window.addEventListener('mouseup', endDrag);
+  nav.addEventListener('mouseleave', ()=>{ if(isDown) endDrag(); });
+  nav.addEventListener('click', e=>{
+    if(!moved) return;
+    e.preventDefault();
+    e.stopPropagation();
+    moved = false;
+  }, true);
+})();
 function renderCommissionFallback(err){
   const panel = document.getElementById('t-commission');
   if(!panel) return;
