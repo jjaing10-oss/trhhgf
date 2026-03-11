@@ -1002,7 +1002,8 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
 .ds-msg-card.pos{border-left:3px solid #22c55e}.ds-msg-card.neg{border-left:3px solid #ef4444}.ds-msg-card.urg{border-left:3px solid #f59e0b}
 
 /* Mobile/PWA tab usability improvements */
-.bnav{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory}
+.bnav{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;cursor:grab;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.bnav.dragging{cursor:grabbing;scroll-snap-type:none}
 .bni{min-width:96px;min-height:56px;scroll-snap-align:start}
 .bni .lbl{font-size:10px;line-height:1.1;text-align:center;padding:0 2px;word-break:keep-all}
 .pnl{padding-left:calc(16px + var(--safe-left));padding-right:calc(16px + var(--safe-right))}
