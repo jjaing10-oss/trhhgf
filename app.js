@@ -2335,6 +2335,12 @@ function buildBriefingEngine(){
 
 function initBriefing(){
   const E=buildBriefingEngine();
+  const mmPanel=document.getElementById('meetingModePanel');
+  if(mmPanel){
+    mmPanel.style.display='none';
+    mmPanel.innerHTML='';
+    mmPanel.removeAttribute('data-briefing-text');
+  }
   const fN4 = v => fmtSubNum(Number(v)||0);
   const fDelta = (v,green) => {
     const n=Number(v)||0;
@@ -6029,7 +6035,7 @@ function genCommissionReport(){
 
 
 
-
+// ===== Management Meeting Mode =====
 function copyManagementMeetingBriefing(){
   const panel=document.getElementById('meetingModePanel');
   if(!panel) return;
