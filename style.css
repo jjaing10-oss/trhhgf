@@ -981,3 +981,46 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
 .ds-ch-platform .ds-ch-name {
   color:#a78bfa;
 }
+
+
+/* Executive structured dashboard additions */
+.ds-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ds-mini-card{background:rgba(255,255,255,.03);border:1px solid rgba(148,163,184,.12);border-radius:12px;padding:10px}
+.ds-mini-card.full{grid-column:1/-1}
+.ds-mini-card .lbl{font-size:10px;font-weight:800;color:#93c5fd;margin-bottom:8px}
+.mini-row{display:grid;grid-template-columns:72px 1fr 54px;gap:8px;align-items:center;margin-bottom:6px;font-size:10px}
+.mini-track{height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.mini-fill{height:100%;background:linear-gradient(90deg,#a78bfa,#60a5fa)}
+.mini-fill.alt{background:linear-gradient(90deg,#34d399,#22d3ee)}
+.mini-col{display:inline-flex;flex-direction:column;align-items:center;justify-content:flex-end;width:15%;min-width:52px;gap:4px}
+.mini-col .v{width:24px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#60a5fa,#1d4ed8)}
+.mini-col i,.mini-col em{font-style:normal;font-size:9px;color:var(--t3)}
+.mini-empty{font-size:11px;color:var(--t3);padding:8px 0}
+.ds-msg-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.ds-msg-card{border-radius:12px;padding:12px;border:1px solid rgba(148,163,184,.18);background:rgba(255,255,255,.03)}
+.ds-msg-card h4{font-size:12px;margin-bottom:8px}.ds-msg-card ul{padding-left:16px}.ds-msg-card li{font-size:11px;line-height:1.5;color:var(--t2)}
+.ds-msg-card.pos{border-left:3px solid #22c55e}.ds-msg-card.neg{border-left:3px solid #ef4444}.ds-msg-card.urg{border-left:3px solid #f59e0b}
+
+/* Mobile/PWA tab usability improvements */
+.bnav{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory}
+.bni{min-width:96px;min-height:56px;scroll-snap-align:start}
+.bni .lbl{font-size:10px;line-height:1.1;text-align:center;padding:0 2px;word-break:keep-all}
+.pnl{padding-left:calc(16px + var(--safe-left));padding-right:calc(16px + var(--safe-right))}
+@media(max-width:760px){
+  .ds-msg-grid{grid-template-columns:1fr}
+  .ds-mini-grid{grid-template-columns:1fr}
+}
+
+
+/* 경영회의 시작 모드 */
+.rpt-bar-btn.meeting-start{background:linear-gradient(135deg,#0f766e,#10b981);color:#fff;font-weight:800;box-shadow:0 6px 14px rgba(16,185,129,.25)}
+.meeting-mode-panel{margin:10px 0 14px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;padding:14px}
+.meeting-mode-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.meeting-mode-kicker{font-size:10px;font-weight:800;color:#0369a1;letter-spacing:.04em}
+.meeting-mode-head h3{font-size:16px;color:#0f172a;margin-top:3px}
+.meeting-copy-btn{border:1px solid #93c5fd;background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer}
+.meeting-sec{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-top:8px}
+.meeting-sec h4{font-size:13px;color:#0f172a;margin-bottom:6px}
+.meeting-sec ul{padding-left:18px}
+.meeting-sec li{font-size:12px;line-height:1.65;color:#334155;margin-bottom:3px}
+@media(max-width:760px){.meeting-mode-head{flex-direction:column}.meeting-copy-btn{align-self:flex-end}}

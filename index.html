@@ -124,57 +124,53 @@
     </div>
   </div>
 
-  <!-- ▸ CHANNEL P&L SNAPSHOT -->
+  <!-- ▸ SECTION 1: EXECUTIVE SNAPSHOT -->
   <section class="ds-card">
     <div class="ds-head">
-      <div class="ds-kicker">CHANNEL P&amp;L</div>
-      <h2 class="ds-title">채널별 손익 스냅샷</h2>
-      <button class="ds-link" onclick="switchTab('profit')">상세 분석 →</button>
+      <div class="ds-kicker">EXECUTIVE SNAPSHOT</div>
+      <h2 class="ds-title">경영진 핵심 지표</h2>
+      <button class="ds-link" onclick="genExecutiveManagementReport()">보고서 생성 →</button>
     </div>
+    <div class="ds-rank-list" id="dashKpiRank"></div>
+    <div class="ds-mini-grid">
+      <div class="ds-mini-card"><div class="lbl">KPI Heatmap</div><div id="dashKpiHeatmap"></div></div>
+      <div class="ds-mini-card"><div class="lbl">Profit Comparison</div><div id="dashProfitCompare"></div></div>
+      <div class="ds-mini-card full"><div class="lbl">Monthly Trend</div><div id="dashMonthlyTrend"></div></div>
+    </div>
+  </section>
+
+  <!-- ▸ SECTION 2: KEY MESSAGES -->
+  <section class="ds-card">
+    <div class="ds-head">
+      <div class="ds-kicker">KEY MESSAGES</div>
+      <h2 class="ds-title">핵심 메시지 (긍정/부정/긴급조치)</h2>
+      <button class="ds-link" onclick="switchTab('ai')">AI 브리핑 →</button>
+    </div>
+    <div id="dashKeyMessages" class="ds-msg-grid"></div>
+  </section>
+
+  <!-- ▸ SECTION 3: CHANNEL PERFORMANCE -->
+  <section class="ds-card">
+    <div class="ds-head">
+      <div class="ds-kicker">CHANNEL PERFORMANCE</div>
+      <h2 class="ds-title">채널 성과 (소매/도매/디지털/기업)</h2>
+      <button class="ds-link" onclick="switchTab('profit')">손익 상세 →</button>
+    </div>
+    <div id="dashChannelRanking" class="ds-rank-list"></div>
     <div class="ds-channel-grid" id="dashChannelGrid"></div>
   </section>
 
-  <!-- ▸ TWO-COL: KPI RANKING + RISK -->
-  <div class="ds-two-col">
-    <section class="ds-card">
-      <div class="ds-head">
-        <div class="ds-kicker">KPI RANKING</div>
-        <h2 class="ds-title">본부 성과 순위</h2>
-        <button class="ds-link" onclick="switchTab('kpi')">KPI 분석 →</button>
-      </div>
-      <div id="dashKpiRank" class="ds-rank-list"></div>
-    </section>
-
-    <section class="ds-card">
-      <div class="ds-head">
-        <div class="ds-kicker">RISK WATCH</div>
-        <h2 class="ds-title">리스크 & 액션</h2>
-        <button class="ds-link" onclick="switchTab('ai')">AI 브리핑 →</button>
-      </div>
-      <div id="dashRisk" class="ds-risk-list"></div>
-    </section>
-  </div>
-
-  <!-- ▸ TASK PROGRESS -->
+  <!-- ▸ SECTION 4: RISK & TASK MANAGEMENT -->
   <section class="ds-card">
     <div class="ds-head">
-      <div class="ds-kicker">TASK PROGRESS</div>
-      <h2 class="ds-title">사업과제 이행 현황</h2>
-      <button class="ds-link" onclick="switchTab('tasks')">과제관리 →</button>
+      <div class="ds-kicker">RISK &amp; TASK MANAGEMENT</div>
+      <h2 class="ds-title">High Risk · Delayed Task · 담당부서</h2>
+      <button class="ds-link" onclick="switchTab('tasks')">리스크/과제 →</button>
     </div>
+    <div id="dashRisk" class="ds-risk-list"></div>
     <div class="ds-task-summary" id="dashTaskSummary"></div>
     <div class="ds-task-bars" id="dashTaskBars"></div>
   </section>
-
-  <!-- ▸ QUICK NAV -->
-  <div class="ds-nav-grid">
-    <button class="ds-nav" onclick="switchTab('profit')"><span class="ds-nav-icon">📊</span><span class="ds-nav-label">BM별 이익</span><span class="ds-nav-desc">채널·본부 손익 분석</span></button>
-    <button class="ds-nav" onclick="switchTab('kpi')"><span class="ds-nav-icon">🎯</span><span class="ds-nav-label">KPI 분석</span><span class="ds-nav-desc">본부 순위·편차 분석</span></button>
-    <button class="ds-nav" onclick="switchTab('subscriber')"><span class="ds-nav-icon">📶</span><span class="ds-nav-label">가입자</span><span class="ds-nav-desc">무선·유선 가입자 추이</span></button>
-    <button class="ds-nav" onclick="switchTab('commission')"><span class="ds-nav-icon">💴</span><span class="ds-nav-label">수수료</span><span class="ds-nav-desc">관리수수료 추세 분석</span></button>
-    <button class="ds-nav" onclick="switchTab('tasks')"><span class="ds-nav-icon">📋</span><span class="ds-nav-label">과제관리</span><span class="ds-nav-desc">123개 사업과제 추적</span></button>
-    <button class="ds-nav" onclick="switchTab('ai')"><span class="ds-nav-icon">🤖</span><span class="ds-nav-label">AI 브리핑</span><span class="ds-nav-desc">Claude 기반 심층분석</span></button>
-  </div>
 
 </div>
 
@@ -346,13 +342,16 @@
 <div class="pnl" id="t-ai">
   <!-- 종합 브리핑 보고서 버튼 -->
   <div class="rpt-bar">
+    <button class="rpt-bar-btn meeting-start" onclick="generateManagementMeetingMode()">🚀 경영회의 시작</button>
     <button class="rpt-bar-btn green" onclick="genMonthlyBriefing()">📋 이달의 경영 브리핑</button>
     <button class="rpt-bar-btn blue" onclick="genCeoBriefing()">👔 사장님 보고용 요약</button>
     <button class="rpt-bar-btn" style="background:#ef4444;color:#fff;min-width:fit-content;white-space:nowrap" onclick="genRiskComprehensive()">⚠️ 리스크 종합</button>
+    <button class="rpt-bar-btn" style="background:#7c3aed;color:#fff;min-width:fit-content;white-space:nowrap" onclick="genMeetingReadyBriefing()">🗣️ 회의용 브리핑</button>
   </div>
 
   <!-- 종합 스냅샷 카드 -->
   <div id="briefingSnapshot"></div>
+  <div id="meetingModePanel" class="meeting-mode-panel" style="display:none"></div>
 
   <!-- AI 챗 (접기/펼치기) -->
   <div style="margin-top:14px">
@@ -499,14 +498,14 @@
 </div><!-- /main -->
 
 <nav class="bnav">
-  <button class="bni on" data-t="dashboard" onclick="switchTab(this)"><span class="ico">🧭</span><span class="lbl">대시보드</span></button>
-  <button class="bni" data-t="tasks" onclick="switchTab(this)"><span class="ico">📋</span><span class="lbl">과제관리</span></button>
-  <button class="bni" data-t="profit" onclick="switchTab(this)"><span class="ico">📊</span><span class="lbl">BM이익</span></button>
-  <button class="bni" data-t="kpi" onclick="switchTab(this)"><span class="ico">🎯</span><span class="lbl">KPI분석</span></button>
-  <button class="bni" data-t="subscriber" onclick="switchTab(this)"><span class="ico">📶</span><span class="lbl">가입자</span></button>
-  <button class="bni" data-t="commission" onclick="switchTab(this)"><span class="ico">💴</span><span class="lbl">수수료</span></button>
-  <button class="bni" data-t="ai" onclick="switchTab(this)"><span class="ico">📑</span><span class="lbl">종합브리핑</span></button>
-  <button class="bni" data-t="upload" onclick="switchTab(this)"><span class="ico">📤</span><span class="lbl">업로드</span></button>
+  <button class="bni on" data-t="dashboard" onclick="switchTab(this)"><span class="ico">🧭</span><span class="lbl">Executive Briefing</span></button>
+  <button class="bni" data-t="profit" onclick="switchTab(this)"><span class="ico">📊</span><span class="lbl">Profit Analysis</span></button>
+  <button class="bni" data-t="kpi" onclick="switchTab(this)"><span class="ico">🎯</span><span class="lbl">KPI Analysis</span></button>
+  <button class="bni" data-t="subscriber" onclick="switchTab(this)"><span class="ico">📶</span><span class="lbl">Subscriber Analysis</span></button>
+  <button class="bni" data-t="commission" onclick="switchTab(this)"><span class="ico">💴</span><span class="lbl">Commission Analysis</span></button>
+  <button class="bni" data-t="tasks" onclick="switchTab(this)"><span class="ico">⚠️</span><span class="lbl">Risk & Task</span></button>
+  <button class="bni" data-t="ai" onclick="switchTab(this)"><span class="ico">🤖</span><span class="lbl">AI Briefing</span></button>
+  <button class="bni" data-t="upload" onclick="switchTab(this)"><span class="ico">📤</span><span class="lbl">Data Upload</span></button>
 </nav>
 
 
