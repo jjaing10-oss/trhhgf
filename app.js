@@ -13,7 +13,7 @@ const hmc=(v,arr)=>{const s=[...arr].sort((a,b)=>b-a),i=s.indexOf(v);return i<=1
 const comma=n=>Math.round(n).toLocaleString();
 
 // ==================== TAB ====================
-let currentTab='tasks';
+let currentTab='dashboard';
 function switchTab(btn){
   const t = (btn && btn.dataset) ? btn.dataset.t : btn;
   currentTab = t;
@@ -6028,6 +6028,48 @@ function genCommissionReport(){
 
 
 
+
+function genMeetingReadyBriefing(){
+  const E=buildBriefingEngine();
+  const risks=(E.actions||[]).filter(a=>a.priority==='HIGH').slice(0,3);
+  const quick=(E.insights||[]).slice(0,4);
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>회의용 브리핑</title>${rptStyle()}</head><body><div class="wrap">
+  <h1>회의용 경영 브리핑 (${D.period||'-'})</h1>
+  <h2>1) Management Summary</h2>
+  <ul>${quick.map(x=>`<li>${x}</li>`).join('')}</ul>
+  <h2>2) Issue Detection</h2>
+  <ul>${risks.map(x=>`<li><strong>${x.item}</strong> · ${x.detail}</li>`).join('')||'<li>핵심 이슈 없음</li>'}</ul>
+  <h2>3) Action Recommendations</h2>
+  <table><thead><tr><th>우선순위</th><th>과제</th><th>담당</th><th>기한</th></tr></thead><tbody>
+  ${(E.actions||[]).slice(0,8).map(a=>`<tr><td>${a.priority}</td><td>${a.item}</td><td>${a.owner}</td><td>${a.due}</td></tr>`).join('')}
+  </tbody></table>
+  <h2>4) Meeting Script</h2>
+  <div class="warn">금월 핵심은 수익성 하위 채널 구조개선, KPI 편차 축소, 관리수수료 기반 방어입니다. 본부별 실행안을 이번 주 내 확정하고, 다음 회의에서 KPI·손익 개선지표를 재점검하겠습니다.</div>
+  </div></body></html>`;
+  openReport(h,'회의용 브리핑');
+}
+
+function genExecutiveManagementReport(){
+  const E=buildBriefingEngine();
+  const P=E.P||{}; const K=E.K||[];
+  const byOp=['retail','wholesale','digital','enterprise'].map(k=>({k,n:CN[k],rev:(P.revenue||{})[k]||0,op:(P.op||{})[k]||0}));
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Executive Management Report</title>${rptStyle()}</head><body><div class="wrap">
+  <h1>Executive Management Analysis Report</h1>
+  <h2>Executive Summary</h2>
+  <p>매출 ${fB((P.revenue||{}).total||0)}억, 영업이익 ${fB((P.op||{}).total||0)}억, 영업이익률 ${pctStr(ratio((P.op||{}).total,(P.revenue||{}).total))}, KPI 평균 ${K.length?(K.reduce((a,b)=>a+(b.ts||0),0)/K.length).toFixed(1):'-'}점.</p>
+  <h2>Profit Analysis</h2>
+  <table><thead><tr><th>채널</th><th>매출(억)</th><th>영업이익(억)</th><th>이익률</th></tr></thead><tbody>
+  ${byOp.map(c=>`<tr><td>${c.n}</td><td>${fB(c.rev)}</td><td>${fB(c.op)}</td><td>${pctStr(ratio(c.op,c.rev))}</td></tr>`).join('')}
+  </tbody></table>
+  <h2>KPI Analysis</h2>
+  <table><thead><tr><th>순위</th><th>본부</th><th>점수</th></tr></thead><tbody>${K.slice().sort((a,b)=>b.ts-a.ts).map((x,i)=>`<tr><td>${i+1}</td><td>${x.hq}</td><td>${x.ts.toFixed(1)}</td></tr>`).join('')}</tbody></table>
+  <h2>Subscriber Analysis</h2><p>${(E.sub&&E.sub.wirelessTot)?`무선 ${fmtSubNum(E.sub.wirelessTot)}명, 전월 ${E.sub.wirelessDelta>=0?'+':''}${E.sub.wirelessDelta.toLocaleString('ko-KR')}명, ARPU ${Math.round(E.sub.arpu||0).toLocaleString('ko-KR')}원.`:'데이터 없음'}</p>
+  <h2>Commission Analysis</h2><p>총 수수료 ${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1):'N/A'}억, 관리수수료 비중 ${pctStr(E.mgmtMix)}.</p>
+  <h2>Risk & Tasks</h2><ul>${(E.actions||[]).slice(0,8).map(a=>`<li>[${a.priority}] ${a.item} (${a.owner}, ${a.due})</li>`).join('')}</ul>
+  </div></body></html>`;
+  openReport(h,'Executive Management Report');
+}
+
 // ===== Dashboard Init =====
 function initDashboard(){
   try{
@@ -6046,6 +6088,9 @@ function initDashboard(){
     const gross = P.gross ? P.gross.total : 0;
     const margin = revenue ? (op/revenue*100) : 0;
     const avgKpi = K.length ? K.reduce((s,x)=>s+(Number(x.ts)||0),0)/K.length : 0;
+    const lowPPCount = T.filter(t=>t.pp<0.2 && t.st==='진행중').length;
+    const worstCh = ['retail','wholesale','digital','enterprise'].map(k=>({k,m:(P.revenue&&P.revenue[k])?((P.op&&P.op[k]||0)/(P.revenue[k]||1)):-999})).sort((a,b)=>a.m-b.m)[0];
+    const worstChName = worstCh ? CN[worstCh.k] : '-';
 
     const el = (id)=>document.getElementById(id);
     const fmt = (v) => (v/1e8).toFixed(1)+'억';
@@ -6232,9 +6277,8 @@ function initDashboard(){
       }
       // Task risk
       const delayed = T.filter(t=>t.st==='지연'||t.st==='미착수').length;
-      const lowPP = T.filter(t=>t.pp<0.2 && t.st==='진행중').length;
       if(delayed>0) risks.push({level:'high',text:`사업과제 <strong>${delayed}건</strong> 지연/미착수 — 즉시 점검 필요`});
-      if(lowPP>5) risks.push({level:'med',text:`추진도 20% 미만 과제 <strong>${lowPP}건</strong> — 실행력 강화 필요`});
+      if(lowPPCount>5) risks.push({level:'med',text:`추진도 20% 미만 과제 <strong>${lowPPCount}건</strong> — 실행력 강화 필요`});
       // SGA risk
       if(P.sga && P.revenue){
         const sgaRatio = P.sga.total/P.revenue.total*100;
@@ -6283,6 +6327,48 @@ function initDashboard(){
       }).join('');
     }
 
+
+    const keyEl = el('dashKeyMessages');
+    if(keyEl){
+      const pos = [`영업이익 ${fmt(op)} 유지`, `KPI 상위 본부: ${(K[0]&&K[0].hq)||'-'}`, `완료 과제 ${done||0}건`];
+      const neg = [`수익성 하위: ${worstChName}`, `저추진 과제 ${lowPPCount||0}건`, `관리수수료 대상 감소 추세`];
+      const urg = [`1주 내 하위채널 손익 개선안 제출`, `지연/미착수 과제 주간 점검`, `본부별 KPI 편차 축소 TF 가동`];
+      keyEl.innerHTML = `
+        <div class="ds-msg-card pos"><h4>Positive Highlights</h4><ul>${pos.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+        <div class="ds-msg-card neg"><h4>Negative Highlights</h4><ul>${neg.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+        <div class="ds-msg-card urg"><h4>Urgent Actions</h4><ul>${urg.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+    }
+
+    const rankChEl = el('dashChannelRanking');
+    if(rankChEl && P.op && P.revenue){
+      const majors=['retail','wholesale','digital','enterprise'].map(k=>({k,n:CN[k],op:P.op[k]||0,rev:P.revenue[k]||0}));
+      const sorted=majors.sort((a,b)=>(b.op/b.rev||-99)-(a.op/a.rev||-99));
+      rankChEl.innerHTML = sorted.map((c,i)=>`<div class="ds-rank-row"><div class="ds-rank-medal">${i+1}</div><div class="ds-rank-name">${c.n}</div><div class="ds-rank-bar"><div class="ds-rank-fill" style="width:${Math.max(6,Math.min(100,((c.op/c.rev)||0)*600)).toFixed(0)}%"></div></div><div class="ds-rank-score">${((((c.op/c.rev)||0)*100)).toFixed(1)}%</div></div>`).join('');
+    }
+
+    const hm = el('dashKpiHeatmap');
+    if(hm && K.length){
+      const max=Math.max(...K.map(x=>x.ts||0));
+      hm.innerHTML = K.map(k=>`<div class="mini-row"><span>${k.hq.replace('본부','')}</span><div class="mini-track"><div class="mini-fill" style="width:${((k.ts||0)/max*100).toFixed(0)}%"></div></div><b>${(k.ts||0).toFixed(1)}</b></div>`).join('');
+    }
+
+    const pcEl = el('dashProfitCompare');
+    if(pcEl && P.revenue && P.op){
+      const items=['retail','wholesale','digital','enterprise'].map(k=>({n:CN[k],r:P.revenue[k]||0,o:P.op[k]||0}));
+      const mx=Math.max(...items.map(i=>i.r||0),1);
+      pcEl.innerHTML=items.map(i=>`<div class="mini-row"><span>${i.n}</span><div class="mini-track"><div class="mini-fill alt" style="width:${(i.r/mx*100).toFixed(0)}%"></div></div><b>${fB(i.o)}억</b></div>`).join('');
+    }
+
+    const mtEl = el('dashMonthlyTrend');
+    if(mtEl){
+      const months=(window.monthlyProfitData||[]).slice(-6);
+      if(months.length){
+        const mx=Math.max(...months.map(m=>m.total||0),1);
+        mtEl.innerHTML=months.map(m=>`<div class="mini-col"><i>${m.month}</i><div class="v" style="height:${Math.max(8,(m.total/mx*90)).toFixed(0)}px"></div><em>${fB(m.total)}</em></div>`).join('');
+      } else {
+        mtEl.innerHTML='<div class="mini-empty">누적 업로드 시 월별 추이 자동 생성</div>';
+      }
+    }
   }catch(e){
     console.error('dashboard init error',e);
   }
