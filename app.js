@@ -5209,6 +5209,8 @@ function handleFile(input,type){if(input.files[0])parseExcel(input.files[0],type
 const BASE_MONTH_STORAGE_KEY = 'ktms_base_month';
 const UPLOADED_STATE_STORAGE_KEY = 'ktms_uploaded_state_v1';
 const TAB_MONTH_STORAGE_KEY = 'ktms_tab_month_v1';
+const BUNDLED_PLAN_FILE = '★★ 26년 경영계획 - 2025.09.30 v4.3 (3안 가지고 다시 일단락) (매출 8월제출 복원) v8.1 (26년 월별 목표) (1) (1).xlsx';
+const BUNDLED_MIDTERM_FILE = '1. 중기 및 2026년 그룹사 경영계획(안)_kt엠앤에스 v7.81 (1) (1).xlsx';
 
 function getSavedTabMonths(){
   try{ return JSON.parse(localStorage.getItem(TAB_MONTH_STORAGE_KEY)||'{}')||{}; }catch(e){ return {}; }
@@ -5395,6 +5397,38 @@ function parseExcel(file,type){
     }catch(err){showUpStatus(type,'err','❌ '+err.message);}
   };
   reader.readAsArrayBuffer(file);
+}
+
+async function parseBundledExcelFile(path, type){
+  const res = await fetch(encodeURI(path), {cache:'no-store'});
+  if(!res.ok) throw new Error(`${path} 파일을 찾을 수 없습니다. (${res.status})`);
+  const buf = await res.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  if(type==='plan') parsePlanExcel(wb, path);
+  else if(type==='midterm') parseMidtermExcel(wb, path);
+}
+
+async function loadBundledManagementPlans(){
+  ensureSimulationDataShape();
+  const hasPlan = Array.isArray(D.planData?.monthly) && D.planData.monthly.length>0;
+  const hasMidterm = Array.isArray(D.midtermAssumptions?.assumptions) && D.midtermAssumptions.assumptions.length>0;
+  if(hasPlan && hasMidterm) return;
+
+  if(!hasPlan){
+    try{
+      await parseBundledExcelFile(BUNDLED_PLAN_FILE, 'plan');
+    }catch(err){
+      showUpStatus('plan','warn','⚠️ 내장 경영계획 자동 로드 실패: '+err.message+'\n필요 시 업로드 탭에서 직접 업로드해 주세요.');
+    }
+  }
+
+  if(!hasMidterm){
+    try{
+      await parseBundledExcelFile(BUNDLED_MIDTERM_FILE, 'midterm');
+    }catch(err){
+      showUpStatus('midterm','warn','⚠️ 내장 중기/그룹계획 자동 로드 실패: '+err.message+'\n필요 시 업로드 탭에서 직접 업로드해 주세요.');
+    }
+  }
 }
 
 function parsePlanExcel(wb, filename){
@@ -5917,6 +5951,7 @@ loadUploadedState();
 ensureSimulationDataShape();
 const savedBaseMonth = getSavedBaseMonth();
 if(savedBaseMonth) applyBaseMonthToUi(savedBaseMonth, '최근 업로드');
+loadBundledManagementPlans();
 loadSubscriberData();
 initTaskUI();initProfitUI();initKpiUI();initSubscriberUI();initDashboard();
 updateTabMonthBadges();
