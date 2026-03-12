@@ -463,30 +463,10 @@ function downloadReport(){
   </div>
   <div id="_edit_toolbar_space" style="height:76px"></div>
   <script>(function(){
-    var lastRange = null;
-    function getLiveRange(){
+    function getRange(){
       var sel = window.getSelection && window.getSelection();
       if(!sel || !sel.rangeCount) return null;
       return sel.getRangeAt(0);
-    }
-    function cacheSelection(){
-      var range = getLiveRange();
-      if(!range || range.collapsed) return;
-      var node = range.commonAncestorContainer;
-      var el = node && node.nodeType===1 ? node : (node ? node.parentElement : null);
-      if(el && el.closest && el.closest('#_edit_banner')) return;
-      lastRange = range.cloneRange();
-    }
-    function getRange(){
-      var live = getLiveRange();
-      if(live && !live.collapsed) return live;
-      if(!lastRange) return null;
-      var sel = window.getSelection && window.getSelection();
-      if(sel){
-        sel.removeAllRanges();
-        sel.addRange(lastRange);
-      }
-      return lastRange;
     }
     function wrapSelection(styleObj){
       var range = getRange();
@@ -499,13 +479,12 @@ function downloadReport(){
         span.appendChild(frag);
         range.insertNode(span);
       }
-      lastRange = null;
     }
     function alignSelection(align){
       var range = getRange();
       if(!range) return;
       var node = range.commonAncestorContainer;
-      var el = node && node.nodeType===1 ? node : (node ? node.parentElement : null);
+      var el = node.nodeType===1 ? node : node.parentElement;
       while(el && el!==document.body && !/^P|DIV|TD|TH|LI|H[1-6]$/.test(el.tagName||'')){ el = el.parentElement; }
       if(!el || el===document.body){
         var box = document.createElement('div');
@@ -516,20 +495,11 @@ function downloadReport(){
           box.appendChild(frag);
           range.insertNode(box);
         }
-      } else {
-        el.style.textAlign = align;
+        return;
       }
-      lastRange = null;
+      el.style.textAlign = align;
     }
-    function bind(id, fn){
-      var el=document.getElementById(id);
-      if(!el) return;
-      el.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      el.addEventListener('click', fn);
-    }
-    document.addEventListener('selectionchange', cacheSelection);
-    document.addEventListener('keyup', cacheSelection);
-    document.addEventListener('mouseup', cacheSelection);
+    function bind(id, fn){ var el=document.getElementById(id); if(el) el.addEventListener('click', fn); }
     bind('_edit_apply_style', function(){
       var size=(document.getElementById('_edit_font_size')||{}).value||'16px';
       var color=(document.getElementById('_edit_font_color')||{}).value||'#111827';
@@ -4889,6 +4859,7 @@ function saveBaseMonth(month){
 function applyBaseMonthToUi(month, sourceLabel){
   if(!month) return;
   D.baseMonth = month;
+  D.period = month + ' 기준';
   const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
   if(badge) badge.textContent = month;
   const upBadge = document.getElementById('upBasemonthBadge');
