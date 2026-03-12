@@ -29,6 +29,7 @@ function switchTab(btn){
   if(panel) panel.classList.add('on');
   try{
     if(t==='commission') initCommission();
+    if(t==='simulate') initSimulationTab();
     if(t==='ai') initBriefing();
   }catch(err){
     console.error('tab render error:', t, err);
@@ -84,6 +85,94 @@ function renderCommissionFallback(err){
     </div>`;
 }
 function toggleSec(hdr){hdr.classList.toggle('closed');hdr.nextElementSibling.classList.toggle('hidden');}
+
+
+// ==================== WHAT-IF SIMULATION ====================
+const simulationState = { inited:false };
+
+function getSimulationBase(){
+  const rev = Number(D?.profit?.revenue?.total)||0;
+  const op = Number(D?.profit?.op?.total)||0;
+  const jan = D?.commission?.jan26||{};
+  const mgmt = Number(jan?.mgmt_fee?.total)||0;
+  const policy = Number(jan?.policy_fee?.total)||0;
+  return { rev, op, mgmt, policy, opMargin: rev>0?op/rev:0 };
+}
+
+function initSimulationTab(){
+  if(!document.getElementById('simResult')) return;
+  if(!simulationState.inited){
+    simulationState.inited = true;
+    resetSimulationInputs();
+  }
+  updateSimulation();
+}
+
+function resetSimulationInputs(){
+  [['simCapa',0],['simMgmt',0],['simPolicy',0],['simCost',0]].forEach(([id,v])=>{
+    const el=document.getElementById(id);
+    if(el) el.value=v;
+  });
+  updateSimulation();
+}
+
+function applySimulationPreset(type){
+  const presets = {
+    base:[0,0,0,0],
+    best:[10,8,6,4],
+    worst:[-12,-10,-8,-5]
+  };
+  const p = presets[type]||presets.base;
+  ['simCapa','simMgmt','simPolicy','simCost'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) el.value = p[i];
+  });
+  updateSimulation();
+}
+
+function updateSimulation(){
+  const base = getSimulationBase();
+  const read = id => Number(document.getElementById(id)?.value||0)/100;
+  const capa = read('simCapa');
+  const mgmt = read('simMgmt');
+  const policy = read('simPolicy');
+  const cost = read('simCost');
+
+  const mgmtWeight = base.rev>0 ? base.mgmt/base.rev : 0;
+  const policyWeight = base.rev>0 ? base.policy/base.rev : 0;
+
+  const revFromCapa = base.rev * capa;
+  const revFromMgmt = base.rev * mgmtWeight * mgmt;
+  const revFromPolicy = base.rev * policyWeight * policy;
+  const simRev = Math.max(0, base.rev + revFromCapa + revFromMgmt + revFromPolicy);
+
+  const opFromRev = (revFromCapa + revFromMgmt + revFromPolicy) * base.opMargin;
+  const opFromCost = base.op * cost;
+  const simOp = base.op + opFromRev + opFromCost;
+  const simMargin = simRev>0 ? (simOp/simRev) : 0;
+
+  const setVal=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent = `${v>=0?'+':''}${(v*100).toFixed(0)}%`; };
+  setVal('simCapaVal', capa);
+  setVal('simMgmtVal', mgmt);
+  setVal('simPolicyVal', policy);
+  setVal('simCostVal', cost);
+
+  const diffRev = simRev-base.rev;
+  const diffOp = simOp-base.op;
+  const result = document.getElementById('simResult');
+  if(result){
+    result.innerHTML = `
+      <div class="sim-card"><div class="k">시뮬레이션 매출</div><div class="v">${fB(simRev)}억</div><div class="d" style="color:${diffRev>=0?'#86efac':'#fca5a5'}">${diffRev>=0?'+':''}${fB(diffRev)}억 vs 기준</div></div>
+      <div class="sim-card"><div class="k">시뮬레이션 영업이익</div><div class="v">${fB(simOp)}억</div><div class="d" style="color:${diffOp>=0?'#86efac':'#fca5a5'}">${diffOp>=0?'+':''}${fB(diffOp)}억 vs 기준</div></div>
+      <div class="sim-card"><div class="k">시뮬레이션 영업이익률</div><div class="v">${(simMargin*100).toFixed(1)}%</div><div class="d">기준 ${(base.opMargin*100).toFixed(1)}%</div></div>
+      <div class="sim-card"><div class="k">수수료 영향 가중치</div><div class="v">${((mgmtWeight+policyWeight)*100).toFixed(1)}%</div><div class="d">관리 ${ (mgmtWeight*100).toFixed(1)}% · 정책 ${(policyWeight*100).toFixed(1)}%</div></div>`;
+  }
+
+  const note=document.getElementById('simNote');
+  if(note){
+    note.textContent = `기준값: 매출 ${fB(base.rev)}억 / 영업이익 ${fB(base.op)}억 · CAPA와 수수료는 전사 매출 대비 비중 가중치로 반영했습니다.`;
+  }
+}
 function switchKpiTab(tab){
   ['rt','wh','smb'].forEach(t=>{
     const panel=document.getElementById('kpiPanel-'+t);
@@ -4970,7 +5059,8 @@ function updateTabMonthBadges(){
     ['tabMonthProfit', m.profit || null],
     ['tabMonthKpi', m.kpi || null],
     ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || null)],
-    ['tabMonthCommission', m.commission || null]
+    ['tabMonthCommission', m.commission || null],
+    ['tabMonthSim', m.profit || null]
   ];
   mapping.forEach(([id,val])=>{
     const el=document.getElementById(id);
