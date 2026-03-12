@@ -160,7 +160,37 @@
     <div class="ds-channel-grid" id="dashChannelGrid"></div>
   </section>
 
-  <!-- ▸ SECTION 4: RISK & TASK MANAGEMENT -->
+
+  <!-- ▸ SECTION 4: REPORT LAUNCHPAD -->
+  <section class="ds-card">
+    <div class="ds-head">
+      <div class="ds-kicker">REPORT LAUNCHPAD</div>
+      <h2 class="ds-title">보고서 허브 · 데이터 준비상태</h2>
+      <button class="ds-link" onclick="switchTab('upload')">데이터 업로드 →</button>
+    </div>
+    <div class="ds-ready-grid" id="dashReadyGrid"></div>
+    <div class="ds-launch-grid" id="dashLaunchGrid">
+      <button class="ds-launch-btn" onclick="runLaunchpadReport('ceo')">
+        <b>👔 사장님 보고 요약</b>
+        <span>핵심결론 + 리스크 + 즉시 액션</span>
+      </button>
+      <button class="ds-launch-btn" onclick="runLaunchpadReport('exec')">
+        <b>⭐ Executive 종합</b>
+        <span>손익/채널/비용 구조 한 번에</span>
+      </button>
+      <button class="ds-launch-btn" onclick="runLaunchpadReport('risk')">
+        <b>⚠️ 리스크 종합</b>
+        <span>고위험 이슈와 지연 과제 추출</span>
+      </button>
+      <button class="ds-launch-btn" onclick="runLaunchpadReport('task')">
+        <b>📄 전사 과제 종합</b>
+        <span>진행률, 담당조직, 지연 포인트</span>
+      </button>
+    </div>
+    <div class="ds-ready-note" id="dashReadyNote">업로드 상태 확인 중...</div>
+  </section>
+
+  <!-- ▸ SECTION 5: RISK & TASK MANAGEMENT -->
   <section class="ds-card">
     <div class="ds-head">
       <div class="ds-kicker">RISK &amp; TASK MANAGEMENT</div>

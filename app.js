@@ -11,6 +11,7 @@ const pct=n=>Math.round(n*100)+'%';
 const pc=p=>p>=.8?'var(--g)':p>=.5?'var(--acc)':p>=.2?'var(--y)':'var(--r)';
 const hmc=(v,arr)=>{const s=[...arr].sort((a,b)=>b-a),i=s.indexOf(v);return i<=1?'hm-h':i>=arr.length-2?'hm-l':'hm-m';};
 const comma=n=>Math.round(n).toLocaleString();
+const uploadHealth={task:'unknown',profit:'unknown',profitYtd:'unknown',kpi:'unknown',factbook:'unknown',hqprofit:'unknown',comm:'unknown'};
 
 // ==================== TAB ====================
 let currentTab='dashboard';
@@ -5078,7 +5079,17 @@ function parseHqProfitExcel(wb, filename){
   }catch(err){ showUpStatus('hqprofit','err','❌ 파싱 오류: '+err.message); }
 }
 
-function showUpStatus(type,cls,msg){const el=document.getElementById('s'+type.charAt(0).toUpperCase()+type.slice(1));el.className='up-status '+cls;el.innerHTML=msg.replace(/\n/g,'<br>');}
+function showUpStatus(type,cls,msg){const el=document.getElementById('s'+type.charAt(0).toUpperCase()+type.slice(1));if(el){el.className='up-status '+cls;el.innerHTML=msg.replace(/\n/g,'<br>');}uploadHealth[type]=cls;try{if(typeof initDashboard==='function')initDashboard();}catch(e){}}
+
+function runLaunchpadReport(type){
+  const actions={
+    ceo:()=>genCeoBriefing(),
+    exec:()=>genExecutiveManagementReport(),
+    risk:()=>genRiskComprehensive(),
+    task:()=>genTaskReport()
+  };
+  if(actions[type]) actions[type]();
+}
 
 // ==================== INIT ====================
 function normalizeProfitData(){
@@ -6359,6 +6370,32 @@ function initDashboard(){
           <div class="ds-task-bar-pct">${pct}%</div>
         </div>`;
       }).join('');
+    }
+
+
+    const readyGrid = el('dashReadyGrid');
+    const readyNote = el('dashReadyNote');
+    if(readyGrid){
+      const req=[
+        {k:'task',n:'사업과제',required:true},
+        {k:'profit',n:'BM 손익',required:true},
+        {k:'kpi',n:'조직 KPI',required:true},
+        {k:'hqprofit',n:'본부 손익',required:false},
+        {k:'factbook',n:'Factbook',required:false},
+        {k:'comm',n:'수수료',required:false}
+      ];
+      const statusMeta={ok:{t:'준비완료',c:'ok'},warn:{t:'주의',c:'warn'},err:{t:'오류',c:'err'},unknown:{t:'미업로드',c:'unknown'}};
+      readyGrid.innerHTML=req.map(item=>{
+        const raw=uploadHealth[item.k]||'unknown';
+        const st=statusMeta[raw]||statusMeta.unknown;
+        return `<div class="ds-ready-item"><span class="ds-ready-name">${item.n}${item.required?' *':''}</span><span class="ds-ready-pill ${st.c}">${st.t}</span></div>`;
+      }).join('');
+      const requiredOk=req.filter(x=>x.required).every(x=>uploadHealth[x.k]==='ok'||uploadHealth[x.k]==='warn');
+      if(readyNote){
+        readyNote.innerHTML = requiredOk
+          ? '필수 데이터(사업과제/BM손익/KPI) 준비 완료 · 임원 보고서 생성 권장'
+          : '필수 데이터(*) 업로드 후 생성하면 보고서 신뢰도가 높아집니다.';
+      }
     }
 
 
