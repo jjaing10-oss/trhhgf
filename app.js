@@ -445,16 +445,78 @@ function downloadReport(){
   const html  = window._currentReportHtml;
   if(!html) return;
 
-  // 다운로드용 HTML: body에 contenteditable 추가 + 편집 안내 배너 삽입
-  const editableHtml = html.replace(
-    '<body>',
-    `<body>
-<div id="_edit_banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef9c3;border-bottom:2px solid #fbbf24;padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif">
-  <span>✏️ 편집 가능 모드 — 텍스트와 숫자를 직접 클릭해서 수정하세요</span>
-  <button onclick="document.getElementById('_edit_banner').style.display='none';document.body.removeAttribute('contenteditable');this.parentElement.remove()" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700">편집 완료</button>
-</div>
-<div style="height:44px"></div>`
-  ).replace('<body>', '<body contenteditable="true" spellcheck="false" style="cursor:text">');
+  const editUi = `<div id="_edit_banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef9c3;border-bottom:2px solid #fbbf24;padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-family:sans-serif">
+    <span>✏️ 편집 가능 모드 — 글자 크기/색상/정렬을 바로 수정할 수 있습니다.</span>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700;color:#92400e">크기
+        <select id="_edit_font_size" style="margin-left:4px;padding:3px 6px;border:1px solid #f59e0b;border-radius:6px;font-size:11px">
+          <option value="12px">12</option><option value="14px">14</option><option value="16px" selected>16</option><option value="18px">18</option><option value="20px">20</option><option value="24px">24</option>
+        </select>
+      </label>
+      <label style="font-size:11px;font-weight:700;color:#92400e">색상 <input id="_edit_font_color" type="color" value="#111827" style="width:28px;height:24px;border:none;background:transparent;vertical-align:middle"></label>
+      <button id="_edit_apply_style" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">글자 적용</button>
+      <button id="_edit_align_left" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">좌측</button>
+      <button id="_edit_align_center" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">가운데</button>
+      <button id="_edit_align_right" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">우측</button>
+      <button id="_edit_done" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700">편집 완료</button>
+    </div>
+  </div>
+  <div id="_edit_toolbar_space" style="height:76px"></div>
+  <script>(function(){
+    function getRange(){
+      var sel = window.getSelection && window.getSelection();
+      if(!sel || !sel.rangeCount) return null;
+      return sel.getRangeAt(0);
+    }
+    function wrapSelection(styleObj){
+      var range = getRange();
+      if(!range || range.collapsed) return;
+      var span = document.createElement('span');
+      Object.keys(styleObj||{}).forEach(function(k){ span.style[k]=styleObj[k]; });
+      try{ range.surroundContents(span); }
+      catch(e){
+        var frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+    }
+    function alignSelection(align){
+      var range = getRange();
+      if(!range) return;
+      var node = range.commonAncestorContainer;
+      var el = node.nodeType===1 ? node : node.parentElement;
+      while(el && el!==document.body && !/^P|DIV|TD|TH|LI|H[1-6]$/.test(el.tagName||'')){ el = el.parentElement; }
+      if(!el || el===document.body){
+        var box = document.createElement('div');
+        box.style.textAlign = align;
+        try{ range.surroundContents(box); }
+        catch(e){
+          var frag = range.extractContents();
+          box.appendChild(frag);
+          range.insertNode(box);
+        }
+        return;
+      }
+      el.style.textAlign = align;
+    }
+    function bind(id, fn){ var el=document.getElementById(id); if(el) el.addEventListener('click', fn); }
+    bind('_edit_apply_style', function(){
+      var size=(document.getElementById('_edit_font_size')||{}).value||'16px';
+      var color=(document.getElementById('_edit_font_color')||{}).value||'#111827';
+      wrapSelection({fontSize:size,color:color});
+    });
+    bind('_edit_align_left', function(){ alignSelection('left'); });
+    bind('_edit_align_center', function(){ alignSelection('center'); });
+    bind('_edit_align_right', function(){ alignSelection('right'); });
+    bind('_edit_done', function(){
+      var b=document.getElementById('_edit_banner'); if(b) b.remove();
+      var s=document.getElementById('_edit_toolbar_space'); if(s) s.remove();
+      document.body.removeAttribute('contenteditable');
+    });
+  })();<\/script>`;
+
+  // 다운로드용 HTML: body에 contenteditable 추가 + 편집 툴바 삽입
+  const editableHtml = html.replace('<body>', '<body contenteditable="true" spellcheck="false" style="cursor:text">').replace('<body contenteditable="true" spellcheck="false" style="cursor:text">', '<body contenteditable="true" spellcheck="false" style="cursor:text">'+editUi);
 
   try {
     const blob = new Blob([editableHtml], {type:'text/html;charset=utf-8'});
@@ -4775,6 +4837,35 @@ function parseFactbookExcel(wb){
 function handleDrop(e,type){e.preventDefault();e.currentTarget.classList.remove('drag');if(e.dataTransfer.files[0])parseExcel(e.dataTransfer.files[0],type);}
 function handleFile(input,type){if(input.files[0])parseExcel(input.files[0],type);}
 
+const BASE_MONTH_STORAGE_KEY = 'ktms_base_month';
+function monthToNumber(month){
+  if(!month || !/^\d{4}\.\d{2}$/.test(month)) return null;
+  const parts = month.split('.');
+  return Number(parts[0])*100 + Number(parts[1]);
+}
+function getSavedBaseMonth(){
+  try{ return localStorage.getItem(BASE_MONTH_STORAGE_KEY); }catch(e){ return null; }
+}
+function saveBaseMonth(month){
+  if(!month) return;
+  try{
+    const saved = getSavedBaseMonth();
+    const nextN = monthToNumber(month);
+    const savedN = monthToNumber(saved);
+    if(savedN && nextN && nextN < savedN) return;
+    localStorage.setItem(BASE_MONTH_STORAGE_KEY, month);
+  }catch(e){}
+}
+function applyBaseMonthToUi(month, sourceLabel){
+  if(!month) return;
+  D.baseMonth = month;
+  D.period = month + ' 기준';
+  const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
+  if(badge) badge.textContent = month;
+  const upBadge = document.getElementById('upBasemonthBadge');
+  if(upBadge) upBadge.textContent = '기준월: ' + month + (sourceLabel ? ' · ' + sourceLabel : '');
+}
+
 // ── 파일명에서 연/월 감지 ──
 function extractMonthFromFilename(filename){
   if(!filename) return null;
@@ -4795,13 +4886,8 @@ function extractMonthFromFilename(filename){
 // ── 헤더 배지 + D.baseMonth 업데이트 ──
 function setGlobalBaseMonth(month, sourceLabel){
   if(!month) return;
-  D.baseMonth = month;
-  // 헤더 배지 업데이트
-  const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
-  if(badge) badge.textContent = month;
-  // 업로드 탭 배지도 갱신
-  const upBadge = document.getElementById('upBasemonthBadge');
-  if(upBadge) upBadge.textContent = '기준월: ' + month + (sourceLabel ? ' · ' + sourceLabel : '');
+  applyBaseMonthToUi(month, sourceLabel);
+  saveBaseMonth(month);
   console.log('기준월 변경:', month, sourceLabel||'');
 }
 
@@ -5101,6 +5187,8 @@ function normalizeProfitData(){
   if(channelSum>0) contrib.total=channelSum+pfOp;
 }
 normalizeProfitData();
+const savedBaseMonth = getSavedBaseMonth();
+if(savedBaseMonth) applyBaseMonthToUi(savedBaseMonth, '최근 업로드');
 loadSubscriberData();initTaskUI();initProfitUI();initKpiUI();initSubscriberUI();initDashboard();
 document.title='KT M&S 경영관리';
 
