@@ -528,6 +528,43 @@
   </div>
 </div>
 
+<!-- ===== 시뮬레이션 패널 ===== -->
+<div class="pnl" id="t-simulate">
+  <div class="sh"><div><div class="sht">시뮬레이션</div><div class="shs">CAPA/수수료 변수 기반 매출·영업이익 What-if 분석</div></div><span class="tab-month-badge" id="tabMonthSim">기준월 -</span></div>
+  <div class="up-card sim-wrap">
+    <h3>🧪 What-if 시나리오</h3>
+    <div class="desc">변수값을 바꾸면 결과가 즉시 갱신됩니다. (실적 참고용 간이 모델)</div>
+    <div class="sim-preset-row">
+      <button class="sub-btn gray" onclick="applySimulationPreset('base')">Base</button>
+      <button class="sub-btn gray" onclick="applySimulationPreset('best')">Best</button>
+      <button class="sub-btn gray" onclick="applySimulationPreset('worst')">Worst</button>
+      <button class="sub-btn primary" onclick="resetSimulationInputs()" style="margin-left:auto">초기화</button>
+    </div>
+
+    <div class="sim-grid">
+      <label class="sim-item">CAPA 변동률
+        <input id="simCapa" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simCapaVal">0%</div>
+      </label>
+      <label class="sim-item">관리수수료 변동률
+        <input id="simMgmt" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simMgmtVal">0%</div>
+      </label>
+      <label class="sim-item">정책수수료 변동률
+        <input id="simPolicy" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simPolicyVal">0%</div>
+      </label>
+      <label class="sim-item">비용 효율 개선률
+        <input id="simCost" type="range" min="-10" max="10" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simCostVal">0%</div>
+      </label>
+    </div>
+
+    <div class="sim-result-grid" id="simResult"></div>
+    <div class="sim-note" id="simNote"></div>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <nav class="bnav">
@@ -536,6 +573,7 @@
   <button class="bni" data-t="kpi" onclick="switchTab(this)"><span class="ico">🎯</span><span class="lbl">KPI Analysis</span></button>
   <button class="bni" data-t="subscriber" onclick="switchTab(this)"><span class="ico">📶</span><span class="lbl">Subscriber Analysis</span></button>
   <button class="bni" data-t="commission" onclick="switchTab(this)"><span class="ico">💴</span><span class="lbl">Commission Analysis</span></button>
+  <button class="bni" data-t="simulate" onclick="switchTab(this)"><span class="ico">🧪</span><span class="lbl">What-if</span></button>
   <button class="bni" data-t="tasks" onclick="switchTab(this)"><span class="ico">⚠️</span><span class="lbl">Risk & Task</span></button>
   <button class="bni" data-t="ai" onclick="switchTab(this)"><span class="ico">🤖</span><span class="lbl">AI Briefing</span></button>
   <button class="bni" data-t="upload" onclick="switchTab(this)"><span class="ico">📤</span><span class="lbl">Data Upload</span></button>
