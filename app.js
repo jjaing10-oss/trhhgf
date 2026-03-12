@@ -5222,6 +5222,16 @@ function setTabMonth(type, month){
   }catch(e){}
   updateTabMonthBadges();
 }
+function clearTabMonth(type){
+  if(!type) return;
+  try{
+    const obj = getSavedTabMonths();
+    if(!(type in obj)) return;
+    delete obj[type];
+    localStorage.setItem(TAB_MONTH_STORAGE_KEY, JSON.stringify(obj));
+  }catch(e){}
+  updateTabMonthBadges();
+}
 function saveUploadedState(){
   try{
     const payload={
@@ -5621,6 +5631,7 @@ function parseCommExcel(wb, filename){
 
   initCommission();
   if(month) setTabMonth('commission', month);
+  else clearTabMonth('commission');
   saveUploadedState();
   updateTabMonthBadges();
   showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 데이터 업데이트 · 기준월 ${month}` : '✅ 수수료 데이터 업데이트 (기준월 감지 실패)');
@@ -5723,6 +5734,7 @@ function parseProfitExcel(wb, filename){try{
     if(niRow)D.profit.net_income=Math.round(niRow[1]||0);
   }
   if(month) setTabMonth('profit', month);
+  else clearTabMonth('profit');
   saveUploadedState();
   initProfitUI();renderTrendChart();initDashboard();updateTabMonthBadges();
   if(warnings.length>0){
@@ -5813,7 +5825,7 @@ function parseKpiExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
   if(month){ setGlobalBaseMonth(month, 'KPI'); setReportPeriod(month); }
   const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];for(let i=11;i<=16;i++){const r=rows[i];if(!r||!r[1])continue;kpi.push({hq:r[1],ts:r[2]||0,rk:r[3]||0,rt:{t:r[4]||0,s:r[5]||0,p:r[6]||0},wh:{t:r[7]||0,s:r[8]||0,p:r[9]||0},sm:{t:r[10]||0,s:r[11]||0,p:r[12]||0}});}
-  if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;if(month) setTabMonth('kpi', month);saveUploadedState();initKpiUI();initDashboard();updateTabMonthBadges();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
+  if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;if(month) setTabMonth('kpi', month);else clearTabMonth('kpi');saveUploadedState();initKpiUI();initDashboard();updateTabMonthBadges();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
   else showUpStatus('kpi','err','❌ KPI 데이터 부족');
 }catch(err){showUpStatus('kpi','err','❌ '+err.message);}}
 // ── 본부별 손익 파싱 (sum 시트 기준, 원화 단위) ──────────────────
