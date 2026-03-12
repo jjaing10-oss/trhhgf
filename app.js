@@ -4892,13 +4892,12 @@ function loadUploadedState(){
 }
 function updateTabMonthBadges(){
   const m = getSavedTabMonths();
-  const periodMonth = (D.baseMonth || (typeof D.period==='string' && D.period.match(/\d{4}\.\d{2}/) ? D.period.match(/\d{4}\.\d{2}/)[0] : null) || '-');
   const mapping = [
-    ['tabMonthTasks', m.tasks || D.taskMonth || periodMonth],
-    ['tabMonthProfit', m.profit || periodMonth],
-    ['tabMonthKpi', m.kpi || periodMonth],
-    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || periodMonth)],
-    ['tabMonthCommission', m.commission || periodMonth]
+    ['tabMonthTasks', m.tasks || D.taskMonth || null],
+    ['tabMonthProfit', m.profit || null],
+    ['tabMonthKpi', m.kpi || null],
+    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || null)],
+    ['tabMonthCommission', m.commission || null]
   ];
   mapping.forEach(([id,val])=>{
     const el=document.getElementById(id);
@@ -5093,7 +5092,6 @@ function parseCommExcel(wb, filename){
   if(month){
     setGlobalBaseMonth(month, '수수료');
     setReportPeriod(month);
-    setTabMonth('commission', month);
   }
 
   // 업로드한 원본을 로컬에 보존해 새로고침 후에도 최신 수치가 유지되도록 동기화
@@ -5105,6 +5103,7 @@ function parseCommExcel(wb, filename){
   }
 
   initCommission();
+  if(month) setTabMonth('commission', month);
   saveUploadedState();
   updateTabMonthBadges();
   showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 데이터 업데이트 · 기준월 ${month}` : '✅ 수수료 데이터 업데이트 (기준월 감지 실패)');
@@ -5120,7 +5119,7 @@ function parseTaskExcel(wb, filename){
 
 function parseProfitExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month){ setGlobalBaseMonth(month, 'BM별손익'); setReportPeriod(month); setTabMonth('profit', month); }
+  if(month){ setGlobalBaseMonth(month, 'BM별손익'); setReportPeriod(month); }
   var ws=wb.Sheets['종합']||wb.Sheets[wb.SheetNames.find(function(s){return String(s).indexOf('종합')>=0;})];
   if(!ws){showUpStatus('profit','err','❌ 종합 시트 없음');return;}
   var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});
@@ -5206,6 +5205,7 @@ function parseProfitExcel(wb, filename){try{
     if(!niRow)niRow=niRows.find(function(r4){return r4[0]&&norm(r4[0])==='손익';});
     if(niRow)D.profit.net_income=Math.round(niRow[1]||0);
   }
+  if(month) setTabMonth('profit', month);
   saveUploadedState();
   initProfitUI();renderTrendChart();initDashboard();updateTabMonthBadges();
   if(warnings.length>0){
