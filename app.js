@@ -445,16 +445,108 @@ function downloadReport(){
   const html  = window._currentReportHtml;
   if(!html) return;
 
-  // 다운로드용 HTML: body에 contenteditable 추가 + 편집 안내 배너 삽입
-  const editableHtml = html.replace(
-    '<body>',
-    `<body>
-<div id="_edit_banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef9c3;border-bottom:2px solid #fbbf24;padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;display:flex;align-items:center;justify-content:space-between;font-family:sans-serif">
-  <span>✏️ 편집 가능 모드 — 텍스트와 숫자를 직접 클릭해서 수정하세요</span>
-  <button onclick="document.getElementById('_edit_banner').style.display='none';document.body.removeAttribute('contenteditable');this.parentElement.remove()" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700">편집 완료</button>
-</div>
-<div style="height:44px"></div>`
-  ).replace('<body>', '<body contenteditable="true" spellcheck="false" style="cursor:text">');
+  const editUi = `<div id="_edit_banner" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef9c3;border-bottom:2px solid #fbbf24;padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-family:sans-serif">
+    <span>✏️ 편집 가능 모드 — 글자 크기/색상/정렬을 바로 수정할 수 있습니다.</span>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700;color:#92400e">크기
+        <select id="_edit_font_size" style="margin-left:4px;padding:3px 6px;border:1px solid #f59e0b;border-radius:6px;font-size:11px">
+          <option value="12px">12</option><option value="14px">14</option><option value="16px" selected>16</option><option value="18px">18</option><option value="20px">20</option><option value="24px">24</option>
+        </select>
+      </label>
+      <label style="font-size:11px;font-weight:700;color:#92400e">색상 <input id="_edit_font_color" type="color" value="#111827" style="width:28px;height:24px;border:none;background:transparent;vertical-align:middle"></label>
+      <button id="_edit_apply_style" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">글자 적용</button>
+      <button id="_edit_align_left" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">좌측</button>
+      <button id="_edit_align_center" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">가운데</button>
+      <button id="_edit_align_right" style="background:#334155;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">우측</button>
+      <button id="_edit_done" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700">편집 완료</button>
+    </div>
+  </div>
+  <div id="_edit_toolbar_space" style="height:76px"></div>
+  <script>(function(){
+    var lastRange = null;
+    function getLiveRange(){
+      var sel = window.getSelection && window.getSelection();
+      if(!sel || !sel.rangeCount) return null;
+      return sel.getRangeAt(0);
+    }
+    function cacheSelection(){
+      var range = getLiveRange();
+      if(!range || range.collapsed) return;
+      var node = range.commonAncestorContainer;
+      var el = node && node.nodeType===1 ? node : (node ? node.parentElement : null);
+      if(el && el.closest && el.closest('#_edit_banner')) return;
+      lastRange = range.cloneRange();
+    }
+    function getRange(){
+      var live = getLiveRange();
+      if(live && !live.collapsed) return live;
+      if(!lastRange) return null;
+      var sel = window.getSelection && window.getSelection();
+      if(sel){
+        sel.removeAllRanges();
+        sel.addRange(lastRange);
+      }
+      return lastRange;
+    }
+    function wrapSelection(styleObj){
+      var range = getRange();
+      if(!range || range.collapsed) return;
+      var span = document.createElement('span');
+      Object.keys(styleObj||{}).forEach(function(k){ span.style[k]=styleObj[k]; });
+      try{ range.surroundContents(span); }
+      catch(e){
+        var frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+      lastRange = null;
+    }
+    function alignSelection(align){
+      var range = getRange();
+      if(!range) return;
+      var node = range.commonAncestorContainer;
+      var el = node && node.nodeType===1 ? node : (node ? node.parentElement : null);
+      while(el && el!==document.body && !/^P|DIV|TD|TH|LI|H[1-6]$/.test(el.tagName||'')){ el = el.parentElement; }
+      if(!el || el===document.body){
+        var box = document.createElement('div');
+        box.style.textAlign = align;
+        try{ range.surroundContents(box); }
+        catch(e){
+          var frag = range.extractContents();
+          box.appendChild(frag);
+          range.insertNode(box);
+        }
+      } else {
+        el.style.textAlign = align;
+      }
+      lastRange = null;
+    }
+    function bind(id, fn){
+      var el=document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      el.addEventListener('click', fn);
+    }
+    document.addEventListener('selectionchange', cacheSelection);
+    document.addEventListener('keyup', cacheSelection);
+    document.addEventListener('mouseup', cacheSelection);
+    bind('_edit_apply_style', function(){
+      var size=(document.getElementById('_edit_font_size')||{}).value||'16px';
+      var color=(document.getElementById('_edit_font_color')||{}).value||'#111827';
+      wrapSelection({fontSize:size,color:color});
+    });
+    bind('_edit_align_left', function(){ alignSelection('left'); });
+    bind('_edit_align_center', function(){ alignSelection('center'); });
+    bind('_edit_align_right', function(){ alignSelection('right'); });
+    bind('_edit_done', function(){
+      var b=document.getElementById('_edit_banner'); if(b) b.remove();
+      var s=document.getElementById('_edit_toolbar_space'); if(s) s.remove();
+      document.body.removeAttribute('contenteditable');
+    });
+  })();<\/script>`;
+
+  // 다운로드용 HTML: body에 contenteditable 추가 + 편집 툴바 삽입
+  const editableHtml = html.replace('<body>', '<body contenteditable="true" spellcheck="false" style="cursor:text">').replace('<body contenteditable="true" spellcheck="false" style="cursor:text">', '<body contenteditable="true" spellcheck="false" style="cursor:text">'+editUi);
 
   try {
     const blob = new Blob([editableHtml], {type:'text/html;charset=utf-8'});
@@ -4775,6 +4867,34 @@ function parseFactbookExcel(wb){
 function handleDrop(e,type){e.preventDefault();e.currentTarget.classList.remove('drag');if(e.dataTransfer.files[0])parseExcel(e.dataTransfer.files[0],type);}
 function handleFile(input,type){if(input.files[0])parseExcel(input.files[0],type);}
 
+const BASE_MONTH_STORAGE_KEY = 'ktms_base_month';
+function monthToNumber(month){
+  if(!month || !/^\d{4}\.\d{2}$/.test(month)) return null;
+  const parts = month.split('.');
+  return Number(parts[0])*100 + Number(parts[1]);
+}
+function getSavedBaseMonth(){
+  try{ return localStorage.getItem(BASE_MONTH_STORAGE_KEY); }catch(e){ return null; }
+}
+function saveBaseMonth(month){
+  if(!month) return;
+  try{
+    const saved = getSavedBaseMonth();
+    const nextN = monthToNumber(month);
+    const savedN = monthToNumber(saved);
+    if(savedN && nextN && nextN < savedN) return;
+    localStorage.setItem(BASE_MONTH_STORAGE_KEY, month);
+  }catch(e){}
+}
+function applyBaseMonthToUi(month, sourceLabel){
+  if(!month) return;
+  D.baseMonth = month;
+  const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
+  if(badge) badge.textContent = month;
+  const upBadge = document.getElementById('upBasemonthBadge');
+  if(upBadge) upBadge.textContent = '기준월: ' + month + (sourceLabel ? ' · ' + sourceLabel : '');
+}
+
 // ── 파일명에서 연/월 감지 ──
 function extractMonthFromFilename(filename){
   if(!filename) return null;
@@ -4795,14 +4915,13 @@ function extractMonthFromFilename(filename){
 // ── 헤더 배지 + D.baseMonth 업데이트 ──
 function setGlobalBaseMonth(month, sourceLabel){
   if(!month) return;
-  D.baseMonth = month;
-  // 헤더 배지 업데이트
-  const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
-  if(badge) badge.textContent = month;
-  // 업로드 탭 배지도 갱신
-  const upBadge = document.getElementById('upBasemonthBadge');
-  if(upBadge) upBadge.textContent = '기준월: ' + month + (sourceLabel ? ' · ' + sourceLabel : '');
+  applyBaseMonthToUi(month, sourceLabel);
+  saveBaseMonth(month);
   console.log('기준월 변경:', month, sourceLabel||'');
+}
+function setReportPeriod(month){
+  if(!month) return;
+  D.period = month + ' 기준';
 }
 
 function parseExcel(file,type){
@@ -4826,7 +4945,7 @@ function parseExcel(file,type){
 // ── 수수료 파일: 파일명 기준월만 감지 ──
 function parseCommExcel(wb, filename){
   const month = extractMonthFromFilename(filename);
-  if(month) setGlobalBaseMonth(month, '수수료');
+  if(month){ setGlobalBaseMonth(month, '수수료'); setReportPeriod(month); }
   // 실제 수수료 데이터 파싱은 D.commission 하드코딩 유지
   initCommission();
   showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 기준월 → ${month}` : '⚠️ 파일명에서 월 감지 실패 · 기존 데이터 유지');
@@ -4842,7 +4961,7 @@ function parseTaskExcel(wb, filename){
 
 function parseProfitExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month) setGlobalBaseMonth(month, 'BM별손익');
+  if(month){ setGlobalBaseMonth(month, 'BM별손익'); setReportPeriod(month); }
   var ws=wb.Sheets['종합']||wb.Sheets[wb.SheetNames.find(function(s){return String(s).indexOf('종합')>=0;})];
   if(!ws){showUpStatus('profit','err','❌ 종합 시트 없음');return;}
   var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});
@@ -4938,7 +5057,7 @@ function parseProfitExcel(wb, filename){try{
 
 function parseProfitYtdExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month) setGlobalBaseMonth(month, 'BM누적');
+  if(month){ setGlobalBaseMonth(month, 'BM누적'); setReportPeriod(month); }
   var MONTHS=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
   var CH_HDR={'\uc18c\ub9e4':'retail','\ub3c4\ub9e4':'wholesale','\ub514\uc9c0\ud138':'digital','\ub514\uc9c0\ud138(KT\uc0f5)':'digital','\uae30\uc5c5/\uacf5\uacf5':'enterprise','IoT':'iot','\ubc95\uc778\uc601\uc5c5':'corporate_sales','\uc18c\uc0c1\uacf5\uc778':'small_biz'};
   var norm=function(x){return String(x||'').trim().replace(/\s+/g,'').replace(/\n/g,'');};
@@ -5014,7 +5133,7 @@ function renderTrendChart(){
 }
 function parseKpiExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month) setGlobalBaseMonth(month, 'KPI');
+  if(month){ setGlobalBaseMonth(month, 'KPI'); setReportPeriod(month); }
   const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];for(let i=11;i<=16;i++){const r=rows[i];if(!r||!r[1])continue;kpi.push({hq:r[1],ts:r[2]||0,rk:r[3]||0,rt:{t:r[4]||0,s:r[5]||0,p:r[6]||0},wh:{t:r[7]||0,s:r[8]||0,p:r[9]||0},sm:{t:r[10]||0,s:r[11]||0,p:r[12]||0}});}
   if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;initKpiUI();initDashboard();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
   else showUpStatus('kpi','err','❌ KPI 데이터 부족');
@@ -5068,7 +5187,7 @@ function parseHqProfitExcel(wb, filename){
       };
     });
     D.hq = newHq;
-    if(month) D.period = month + ' 기준';
+    if(month){ setGlobalBaseMonth(month, '본부손익'); setReportPeriod(month); }
     initProfitUI();
 
     const lines = newHq.map(h=>{
@@ -5101,6 +5220,8 @@ function normalizeProfitData(){
   if(channelSum>0) contrib.total=channelSum+pfOp;
 }
 normalizeProfitData();
+const savedBaseMonth = getSavedBaseMonth();
+if(savedBaseMonth) applyBaseMonthToUi(savedBaseMonth, '최근 업로드');
 loadSubscriberData();initTaskUI();initProfitUI();initKpiUI();initSubscriberUI();initDashboard();
 document.title='KT M&S 경영관리';
 
@@ -6096,22 +6217,62 @@ function genMeetingReadyBriefing(){
 
 function genExecutiveManagementReport(){
   const E=buildBriefingEngine();
-  const P=E.P||{}; const K=E.K||[];
-  const byOp=['retail','wholesale','digital','enterprise'].map(k=>({k,n:CN[k],rev:(P.revenue||{})[k]||0,op:(P.op||{})[k]||0}));
-  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Executive Management Report</title>${rptStyle()}</head><body><div class="wrap">
-  <h1>Executive Management Analysis Report</h1>
-  <h2>Executive Summary</h2>
-  <p>매출 ${fB((P.revenue||{}).total||0)}억, 영업이익 ${fB((P.op||{}).total||0)}억, 영업이익률 ${pctStr(ratio((P.op||{}).total,(P.revenue||{}).total))}, KPI 평균 ${K.length?(K.reduce((a,b)=>a+(b.ts||0),0)/K.length).toFixed(1):'-'}점.</p>
-  <h2>Profit Analysis</h2>
-  <table><thead><tr><th>채널</th><th>매출(억)</th><th>영업이익(억)</th><th>이익률</th></tr></thead><tbody>
-  ${byOp.map(c=>`<tr><td>${c.n}</td><td>${fB(c.rev)}</td><td>${fB(c.op)}</td><td>${pctStr(ratio(c.op,c.rev))}</td></tr>`).join('')}
-  </tbody></table>
-  <h2>KPI Analysis</h2>
-  <table><thead><tr><th>순위</th><th>본부</th><th>점수</th></tr></thead><tbody>${K.slice().sort((a,b)=>b.ts-a.ts).map((x,i)=>`<tr><td>${i+1}</td><td>${x.hq}</td><td>${x.ts.toFixed(1)}</td></tr>`).join('')}</tbody></table>
-  <h2>Subscriber Analysis</h2><p>${(E.sub&&E.sub.wirelessTot)?`무선 ${fmtSubNum(E.sub.wirelessTot)}명, 전월 ${E.sub.wirelessDelta>=0?'+':''}${E.sub.wirelessDelta.toLocaleString('ko-KR')}명, ARPU ${Math.round(E.sub.arpu||0).toLocaleString('ko-KR')}원.`:'데이터 없음'}</p>
-  <h2>Commission Analysis</h2><p>총 수수료 ${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1):'N/A'}억, 관리수수료 비중 ${pctStr(E.mgmtMix)}.</p>
-  <h2>Risk & Tasks</h2><ul>${(E.actions||[]).slice(0,8).map(a=>`<li>[${a.priority}] ${a.item} (${a.owner}, ${a.due})</li>`).join('')}</ul>
-  </div></body></html>`;
+  const P=E.P||{}; const K=(E.K||[]).slice();
+  const totalRev=(P.revenue||{}).total||0;
+  const totalOp=(P.op||{}).total||0;
+  const margin=ratio(totalOp,totalRev);
+  const avgKpi=K.length?K.reduce((a,b)=>a+(b.ts||0),0)/K.length:0;
+  const topHq=K.length?K.slice().sort((a,b)=>b.ts-a.ts)[0]:null;
+  const riskList=(E.actions||[]).filter(a=>a.priority==='HIGH').slice(0,5);
+  const channelRows=['retail','wholesale','digital','enterprise','iot','corporate_sales','small_biz']
+    .map(k=>({nm:CN[k],rev:(P.revenue||{})[k]||0,op:(P.op||{})[k]||0,margin:ratio((P.op||{})[k]||0,(P.revenue||{})[k]||0)}))
+    .sort((a,b)=>b.op-a.op);
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Executive Management Report</title>${rptStyle()}<style>
+    .ex-wrap{display:flex;flex-direction:column;gap:16px}
+    .ex-hero{padding:18px;border-radius:14px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff}
+    .ex-hero h1{margin:0;font-size:28px}
+    .ex-hero p{margin:8px 0 0;font-size:13px;opacity:.9}
+    .ex-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .ex-card{border:1px solid #dbeafe;background:#f8fafc;border-radius:12px;padding:12px}
+    .ex-k{font-size:11px;color:#475569;font-weight:700}
+    .ex-v{font-size:24px;font-weight:900;color:#0f172a;margin-top:4px}
+    .ex-s{font-size:11px;color:#64748b;margin-top:4px}
+    .ex-sec{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff}
+    .pill{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800}
+    .pill.high{background:#fee2e2;color:#b91c1c}.pill.mid{background:#fef3c7;color:#92400e}.pill.low{background:#dcfce7;color:#166534}
+    @media(max-width:700px){.ex-grid{grid-template-columns:repeat(2,1fr)}}
+  </style></head><body><div class="wrap"><div class="ex-wrap">
+    <div class="ex-hero"><h1>Executive Management Report</h1><p>${D.period||'-'} · 경영진 보고용 통합 요약 (손익·KPI·가입자·수수료·리스크)</p></div>
+
+    <div class="ex-grid">
+      <div class="ex-card"><div class="ex-k">총 매출</div><div class="ex-v">${fB(totalRev)}억</div><div class="ex-s">업로드 기준 재무 데이터</div></div>
+      <div class="ex-card"><div class="ex-k">총 영업이익</div><div class="ex-v">${fB(totalOp)}억</div><div class="ex-s">영업이익률 ${pctStr(margin)}</div></div>
+      <div class="ex-card"><div class="ex-k">KPI 평균</div><div class="ex-v">${avgKpi?avgKpi.toFixed(1):'-'}</div><div class="ex-s">Top 본부: ${topHq?topHq.hq+' '+topHq.ts.toFixed(1):'-'}</div></div>
+      <div class="ex-card"><div class="ex-k">관리수수료 비중</div><div class="ex-v">${pctStr(E.mgmtMix||0)}</div><div class="ex-s">총 수수료 ${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1):'N/A'}억</div></div>
+    </div>
+
+    <div class="ex-sec">
+      <h2>1) Channel Profitability Deep-dive</h2>
+      <table><thead><tr><th>채널</th><th>매출(억)</th><th>영업이익(억)</th><th>이익률</th><th>진단</th></tr></thead><tbody>
+      ${channelRows.map(c=>`<tr><td>${c.nm}</td><td>${fB(c.rev)}</td><td>${fB(c.op)}</td><td>${pctStr(c.margin)}</td><td>${c.margin<0.03?'구조개선 필요':c.margin<0.06?'방어관리':'안정'}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+
+    <div class="ex-sec">
+      <h2>2) KPI & Execution Focus</h2>
+      <table><thead><tr><th>순위</th><th>본부</th><th>점수</th><th>핵심 코멘트</th></tr></thead><tbody>
+      ${K.slice().sort((a,b)=>b.ts-a.ts).map((x,i)=>`<tr><td>${i+1}</td><td>${x.hq}</td><td>${x.ts.toFixed(1)}</td><td>${i<2?'우수사례 확산':'편차 축소 실행관리'}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+
+    <div class="ex-sec">
+      <h2>3) Key Risks & 2-Week Action Plan</h2>
+      <table><thead><tr><th>우선순위</th><th>리스크/과제</th><th>담당</th><th>기한</th></tr></thead><tbody>
+      ${(riskList.length?riskList:(E.actions||[]).slice(0,5)).map(a=>`<tr><td><span class="pill ${a.priority==='HIGH'?'high':a.priority==='MID'?'mid':'low'}">${a.priority||'MID'}</span></td><td>${a.item}</td><td>${a.owner}</td><td>${a.due}</td></tr>`).join('')}
+      </tbody></table>
+      <div class="warn" style="margin-top:10px">실행 원칙: ① 저수익 채널 구조개선 ② KPI 하위 본부 코칭 ③ 관리수수료·판관비 동시 점검을 2주 단위로 반복합니다.</div>
+    </div>
+  </div></div></body></html>`;
   openReport(h,'Executive Management Report');
 }
 
