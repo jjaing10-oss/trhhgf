@@ -3390,16 +3390,21 @@ function genAISummaryReport(){
 }
 
 function quickAI(q){document.getElementById('aiIn').value=q;sendAI();}
-function genThreeYearBusinessPlanAI(){
+async function genThreeYearBusinessPlanAI(){
   const P=D.profit||{},S=D.subscriber||{},C=D.commission||{};
   const rev=P.revenue?.total||0,op=P.op?.total||0,sga=P.sga?.total||0;
   const wirelessNow=S?.current?.wireless_total||S?.wireless?.total?.slice?.(-1)?.[0]||0;
   const capaNow=S?.current?.wireless_capa||S?.wireless?.capa?.slice?.(-1)?.[0]||0;
   const mgmtFeeNow=C?.summary?.management_fee||0;
   const opm=rev?((op/rev)*100):0;
-  const prompt=`[원클릭 사업계획 자동생성]\n\n`
-  +`목표: 향후 3개년(Year+1~Year+3) 사업계획을 작성해줘. `
-  +`반드시 타사 공개사례(국내외 통신/유통/플랫폼 중 유사 BM) 3~5개를 찾아 벤치마크하고 출처(URL/문서명)를 명시해줘.\n\n`
+  const key=document.getElementById('apiKey').value.trim();
+  const mdl=document.getElementById('aiMdl').value;
+  if(!key){addMsg('s','⚠️ API Key를 입력하고 연결해주세요.');return;}
+
+  const prompt=`[3개년 사업계획 리포트 생성 요청]\n\n`
+  +`아래 내부 지표를 기준으로, 경영진 제출용 3개년 사업계획서를 작성해줘.\n`
+  +`중요: 최종 응답은 반드시 순수 HTML만 출력하고(설명문/코드블록 금지), <html>부터 </html>까지 완결된 문서로 작성해줘.\n`
+  +`중요: 표(table), 핵심 KPI 카드, 리스크 매트릭스를 반드시 포함해줘.\n\n`
   +`현재 내부 기준 데이터(대시보드):\n`
   +`- 전사 매출: ${fB(rev)}억\n`
   +`- 전사 영업이익: ${fB(op)}억 (OPM ${opm.toFixed(1)}%)\n`
@@ -3407,21 +3412,56 @@ function genThreeYearBusinessPlanAI(){
   +`- 무선 가입자: ${Math.round(wirelessNow).toLocaleString('ko-KR')}\n`
   +`- CAPA(신규+기변): ${Math.round(capaNow).toLocaleString('ko-KR')}\n`
   +`- 관리수수료: ${fB(mgmtFeeNow)}억\n\n`
-  +`출력 형식(반드시 표 포함):\n`
-  +`1) Executive Summary (한 페이지)\n`
-  +`2) 핵심 가정(시장성장률, CAPA, 수수료율, ARPU/객단가, 비용상승률)\n`
-  +`3) 3개년 재무계획 표: 매출, 매출원가, 매출총이익, 판관비(인건비/판촉비/수수료/기타), 영업이익, 당기순이익\n`
-  +`4) 3개년 운영계획 표: 가입자, CAPA, 관리수수료, 서비스매출, 채널믹스\n`
+  +`필수 구성:\n`
+  +`1) Executive Summary(1 page)\n`
+  +`2) 핵심 가정(시장성장률/CAPA/수수료율/ARPU/비용상승률)\n`
+  +`3) 3개년 재무계획 표(매출/원가/매출총이익/판관비 세부/영업이익/순이익)\n`
+  +`4) 3개년 운영계획 표(가입자/CAPA/관리수수료/서비스매출/채널믹스)\n`
   +`5) 시나리오 3종(보수/기준/공격) + 민감도(수수료율 ±1%p, CAPA ±10%)\n`
-  +`6) 타사 벤치마크 인사이트(무엇을 채택/배제할지)\n`
-  +`7) 실행 로드맵(월별/분기별), KPI, 담당조직\n`
-  +`8) 리스크/대응(재무·조직·시장·규제)\n\n`
-  +`작성 원칙:\n`
-  +`- 숫자는 가능한 범위에서 계산 근거를 함께 제시\n`
-  +`- 모르는 값은 합리적 가정을 먼저 선언 후 계산\n`
-  +`- 외부 사례는 사실과 추정치를 구분\n`
-  +`- 마지막에 '경영진 의사결정 체크리스트 10개'를 제시.`;
-  quickAI(prompt);
+  +`6) 타사 벤치마크 3~5개(회사명/핵심지표/시사점/출처 URL). 사실과 추정 구분\n`
+  +`7) 실행 로드맵(월·분기), KPI, 담당조직\n`
+  +`8) 리스크·대응(재무/시장/조직/규제) + 경영진 의사결정 체크리스트 10개\n\n`
+  +`표현 가이드:\n`
+  +`- 숫자는 계산 근거를 본문 또는 각주에 제시\n`
+  +`- 보기 쉽게 카드/표/강조 박스 사용\n`
+  +`- 한국어로 작성\n`
+  +`- 외부 사례는 출처 URL을 실제 링크(a 태그)로 표기`;
+
+  const lid='bp'+Date.now();
+  document.getElementById('aiMsg').innerHTML+=`<div class="msg a" id="${lid}">🧠 3개년 사업계획 리포트 생성 중...</div>`;
+  document.getElementById('aiMsg').scrollTop=9999;
+  document.getElementById('aiBtn').disabled=true;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:mdl,
+        max_tokens:8192,
+        system:buildCtx(),
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const html=(data.content||[]).map(c=>c.text||'').join('\n').trim();
+    if(!res.ok || !html){
+      const errTxt=JSON.stringify(data.error||data);
+      document.getElementById(lid).innerHTML=`<span style="color:var(--r)">❌ 리포트 생성 실패: ${errTxt}</span>`;
+      return;
+    }
+    document.getElementById(lid).textContent='✅ 리포트 생성 완료 · 보고서 뷰어를 엽니다.';
+    openReport(html,'3개년 사업계획 AI 리포트');
+  }catch(err){
+    document.getElementById(lid).innerHTML=`<span style="color:var(--r)">❌ ${err.message}</span>`;
+  }finally{
+    document.getElementById('aiBtn').disabled=false;
+    document.getElementById('aiMsg').scrollTop=9999;
+  }
 }
 async function sendAI(){
   const inp=document.getElementById('aiIn'),msg=inp.value.trim();if(!msg)return;
