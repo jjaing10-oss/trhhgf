@@ -1030,3 +1030,11 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
 }
 
 .tab-month-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);color:#7dd3fc;font-size:11px;font-weight:800;letter-spacing:.1px}
+
+/* AI 브리핑 탭 스크롤 보강 (모바일 하단 네비 가림/중첩 스크롤 이슈 완화) */
+#t-ai{
+  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 84px) !important;
+}
+#t-ai .ai-msgs{
+  max-height:min(42vh, 360px);
+}
