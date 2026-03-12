@@ -455,6 +455,24 @@
 <div class="pnl" id="t-upload">
   <div class="sh"><div><div class="sht">월간 데이터 업로드</div><div class="shs">엑셀 파일 업로드 → 자동 갱신</div></div></div>
   <div class="up-card">
+    <h3>🗺️ 2026 경영계획(월별 목표)</h3>
+    <div class="desc">★★ 26년 경영계획 파일 (.xlsx) — 전사 손익/무선 CAPA/월별 목표 기반 시뮬레이션 플랜 데이터</div>
+    <div class="up-zone" id="upPlan" onclick="document.getElementById('fPlan').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'plan')">
+      <h4>📁 탭하여 파일 선택</h4><p>26년 경영계획(월별 목표) Excel</p>
+      <input type="file" id="fPlan" accept=".xlsx,.xls" onchange="handleFile(this,'plan')">
+    </div>
+    <div class="up-status" id="sPlan"></div>
+  </div>
+  <div class="up-card">
+    <h3>🏛️ 중기/그룹사 경영계획(안)</h3>
+    <div class="desc">중기 및 2026년 그룹사 경영계획(안) 파일 (.xlsx) — key index/BM별손익 기반 가정 데이터</div>
+    <div class="up-zone" id="upMidterm" onclick="document.getElementById('fMidterm').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'midterm')">
+      <h4>📁 탭하여 파일 선택</h4><p>중기 및 2026년 그룹사 경영계획(안) Excel</p>
+      <input type="file" id="fMidterm" accept=".xlsx,.xls" onchange="handleFile(this,'midterm')">
+    </div>
+    <div class="up-status" id="sMidterm"></div>
+  </div>
+  <div class="up-card">
     <h3>📋 사업과제 이행점검</h3>
     <div class="desc">팀별 사업과제 합본 파일 (.xlsx) — data 또는 X월마감 시트</div>
     <div class="up-zone" id="upTask" onclick="document.getElementById('fTask').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'task')">
@@ -530,37 +548,85 @@
 
 <!-- ===== 시뮬레이션 패널 ===== -->
 <div class="pnl" id="t-simulate">
-  <div class="sh"><div><div class="sht">시뮬레이션</div><div class="shs">CAPA/수수료 변수 기반 매출·영업이익 What-if 분석</div></div><span class="tab-month-badge" id="tabMonthSim">기준월 -</span></div>
+  <div class="sh"><div><div class="sht">시뮬레이션</div><div class="shs">Actual · 2026 Plan · Mid-term 가정 · Scenario 비교</div></div><span class="tab-month-badge" id="tabMonthSim">기준월 -</span></div>
   <div class="up-card sim-wrap">
-    <h3>🧪 What-if 시나리오</h3>
-    <div class="desc">변수값을 바꾸면 결과가 즉시 갱신됩니다. (실적 참고용 간이 모델)</div>
+    <h3>🧭 Executive Simulation Cockpit</h3>
+    <div class="desc">두 계획 파일 업로드 후 실제 실적과 연결해 월별/채널별 영향도를 시뮬레이션합니다.</div>
+
     <div class="sim-preset-row">
-      <button class="sub-btn gray" onclick="applySimulationPreset('base')">Base</button>
-      <button class="sub-btn gray" onclick="applySimulationPreset('best')">Best</button>
-      <button class="sub-btn gray" onclick="applySimulationPreset('worst')">Worst</button>
+      <button class="sub-btn gray" onclick="applySimulationPreset('conservative')">보수적</button>
+      <button class="sub-btn gray" onclick="applySimulationPreset('base')">기준</button>
+      <button class="sub-btn gray" onclick="applySimulationPreset('aggressive')">공격적</button>
       <button class="sub-btn primary" onclick="resetSimulationInputs()" style="margin-left:auto">초기화</button>
     </div>
 
-    <div class="sim-grid">
-      <label class="sim-item">CAPA 변동률
-        <input id="simCapa" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
-        <div class="sim-val" id="simCapaVal">0%</div>
+    <div class="sim-grid cockpit">
+      <label class="sim-item">CAPA 증감률
+        <input id="simCapa" type="range" min="-30" max="30" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simCapaVal">+0%</div>
       </label>
-      <label class="sim-item">관리수수료 변동률
+      <label class="sim-item">순증 가입자 조정률
+        <input id="simNetAdd" type="range" min="-30" max="30" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simNetAddVal">+0%</div>
+      </label>
+      <label class="sim-item">ARPU 변동률
+        <input id="simArpu" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simArpuVal">+0%</div>
+      </label>
+      <label class="sim-item">관리수수료 요율 변동
         <input id="simMgmt" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
-        <div class="sim-val" id="simMgmtVal">0%</div>
+        <div class="sim-val" id="simMgmtVal">+0%</div>
       </label>
-      <label class="sim-item">정책수수료 변동률
+      <label class="sim-item">정책수수료 요율 변동
         <input id="simPolicy" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
-        <div class="sim-val" id="simPolicyVal">0%</div>
+        <div class="sim-val" id="simPolicyVal">+0%</div>
       </label>
-      <label class="sim-item">비용 효율 개선률
-        <input id="simCost" type="range" min="-10" max="10" value="0" step="1" oninput="updateSimulation()">
-        <div class="sim-val" id="simCostVal">0%</div>
+      <label class="sim-item">마케팅/판촉 투자 증감
+        <input id="simMkt" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simMktVal">+0%</div>
+      </label>
+      <label class="sim-item">운영비 효율 개선률
+        <input id="simCostEff" type="range" min="-15" max="15" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simCostEffVal">+0%</div>
+      </label>
+      <label class="sim-item">원가 인플레이션
+        <input id="simInfl" type="range" min="-10" max="15" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simInflVal">+0%</div>
+      </label>
+      <label class="sim-item">KPI 달성률 가정
+        <input id="simKpi" type="range" min="-20" max="20" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simKpiVal">+0%</div>
+      </label>
+      <label class="sim-item">핵심 과제 완료율 가정
+        <input id="simTask" type="range" min="-30" max="30" value="0" step="1" oninput="updateSimulation()">
+        <div class="sim-val" id="simTaskVal">+0%</div>
       </label>
     </div>
 
-    <div class="sim-result-grid" id="simResult"></div>
+    <div class="sim-result-grid" id="simSummary"></div>
+
+    <div class="sim-block">
+      <h4>📈 월별 Actual vs Plan vs Scenario</h4>
+      <div id="simMonthlyChart"></div>
+    </div>
+
+    <div class="sim-two-col">
+      <div class="sim-block">
+        <h4>🏷 BM별 손익 영향</h4>
+        <div id="simBmChart"></div>
+      </div>
+      <div class="sim-block">
+        <h4>🔥 KPI 영향 Heatmap</h4>
+        <div id="simKpiHeatmap"></div>
+      </div>
+    </div>
+
+    <div class="sim-block">
+      <h4>📶 가입자/수수료 영향</h4>
+      <div id="simSubCommChart"></div>
+    </div>
+
+    <div class="sim-insights" id="simInsights"></div>
     <div class="sim-note" id="simNote"></div>
   </div>
 </div>

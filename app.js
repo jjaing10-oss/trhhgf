@@ -11,7 +11,7 @@ const pct=n=>Math.round(n*100)+'%';
 const pc=p=>p>=.8?'var(--g)':p>=.5?'var(--acc)':p>=.2?'var(--y)':'var(--r)';
 const hmc=(v,arr)=>{const s=[...arr].sort((a,b)=>b-a),i=s.indexOf(v);return i<=1?'hm-h':i>=arr.length-2?'hm-l':'hm-m';};
 const comma=n=>Math.round(n).toLocaleString();
-const uploadHealth={task:'unknown',profit:'unknown',profitYtd:'unknown',kpi:'unknown',factbook:'unknown',hqprofit:'unknown',comm:'unknown'};
+const uploadHealth={task:'unknown',profit:'unknown',profitYtd:'unknown',kpi:'unknown',factbook:'unknown',hqprofit:'unknown',comm:'unknown',plan:'unknown',midterm:'unknown'};
 
 // ==================== TAB ====================
 let currentTab='dashboard';
@@ -88,91 +88,296 @@ function toggleSec(hdr){hdr.classList.toggle('closed');hdr.nextElementSibling.cl
 
 
 // ==================== WHAT-IF SIMULATION ====================
-const simulationState = { inited:false };
+const simulationState = {
+  inited:false,
+  scenarioInputs:{
+    capa:0,netAdd:0,arpu:0,mgmt:0,policy:0,mkt:0,costEff:0,infl:0,kpi:0,task:0
+  }
+};
 
-function getSimulationBase(){
-  const rev = Number(D?.profit?.revenue?.total)||0;
-  const op = Number(D?.profit?.op?.total)||0;
+function ensureSimulationDataShape(){
+  if(!D.planData) D.planData = { sourceFile:'', monthly:[], bm:[], kpiTargets:[] };
+  if(!D.midtermAssumptions) D.midtermAssumptions = { sourceFile:'', assumptions:[], bm:[] };
+  if(!D.scenarioState) D.scenarioState = { preset:'base', inputs:{...simulationState.scenarioInputs}, simulatedData:null };
+}
+
+function getScenarioInputMap(){
+  return [
+    ['simCapa','capa'],['simNetAdd','netAdd'],['simArpu','arpu'],['simMgmt','mgmt'],['simPolicy','policy'],
+    ['simMkt','mkt'],['simCostEff','costEff'],['simInfl','infl'],['simKpi','kpi'],['simTask','task']
+  ];
+}
+
+function readScenarioInputs(){
+  const obj={};
+  getScenarioInputMap().forEach(([id,key])=>{ obj[key]=Number(document.getElementById(id)?.value||0)/100; });
+  return obj;
+}
+
+function setScenarioInputs(inputs){
+  getScenarioInputMap().forEach(([id,key])=>{
+    const v = Number(inputs[key]||0)*100;
+    const el=document.getElementById(id);
+    if(el) el.value = Math.max(Number(el.min||-100), Math.min(Number(el.max||100), Math.round(v)));
+  });
+}
+
+function buildSimulationBaseline(){
+  ensureSimulationDataShape();
+  const revActual = Number(D?.profit?.revenue?.total)||0;
+  const opActual = Number(D?.profit?.op?.total)||0;
+  const baseMargin = revActual>0 ? opActual/revActual : 0;
+  const wireless = subscriberData?.wireless || DEFAULT_SUBSCRIBER_DATA?.wireless || {};
+  const netAddActual = Number(wireless.netAdd)||0;
+  const capaActual = Number(wireless.capa)||0;
+  const arpuActual = Number(subscriberData?.arpu?.overall||0);
   const jan = D?.commission?.jan26||{};
-  const mgmt = Number(jan?.mgmt_fee?.total)||0;
-  const policy = Number(jan?.policy_fee?.total)||0;
-  return { rev, op, mgmt, policy, opMargin: rev>0?op/rev:0 };
+  const mgmtActual = Number(jan?.mgmt_fee?.total)||0;
+  const policyActual = Number(jan?.policy_fee?.total)||0;
+  const kpiScore = (D.kpi||[]).length ? (D.kpi.reduce((s,r)=>s+(Number(r.ts)||0),0)/D.kpi.length) : 0;
+  const taskCompletion = (D.tasks||[]).length ? (D.tasks.filter(t=>t.st==='완료').length/D.tasks.length) : 0;
+
+  const planMonthly = Array.isArray(D.planData.monthly) && D.planData.monthly.length
+    ? D.planData.monthly
+    : Array.from({length:12},(_,i)=>({month:(i+1)+'월', revenue:revActual, op:opActual, netAdd:netAddActual, capa:capaActual, mgmtFee:mgmtActual, policyFee:policyActual, arpu:arpuActual}));
+
+  const bmSource = D.planData.bm?.length ? D.planData.bm : CHS.map(ch=>({
+    key:ch,
+    name:CN[ch],
+    revenue:Number(D?.profit?.revenue?.[ch])||0,
+    op:Number(D?.profit?.op?.[ch])||0,
+    margin:(Number(D?.profit?.revenue?.[ch])||0)>0?((Number(D?.profit?.op?.[ch])||0)/(Number(D?.profit?.revenue?.[ch])||1)):0
+  }));
+
+  return {
+    actual:{ revenue:revActual, op:opActual, margin:baseMargin, netAdd:netAddActual, capa:capaActual, arpu:arpuActual, mgmtFee:mgmtActual, policyFee:policyActual, kpi:kpiScore, task:taskCompletion },
+    planMonthly,
+    bm: bmSource,
+    assumptions: D.midtermAssumptions
+  };
+}
+
+function runScenarioSimulation(baseline, inputs){
+  const actual = baseline.actual;
+  const monthly = baseline.planMonthly.map((m,idx)=>{
+    const monthW = 1 + (idx/11)*0.12;
+    const planRev = Number(m.revenue)||0;
+    const planOp = Number(m.op)||0;
+    const planMargin = planRev>0 ? planOp/planRev : actual.margin;
+    const planNet = Number(m.netAdd)||actual.netAdd;
+    const planCapa = Number(m.capa)||actual.capa;
+    const planMgmt = Number(m.mgmtFee)||actual.mgmtFee;
+    const planPolicy = Number(m.policyFee)||actual.policyFee;
+    const planArpu = Number(m.arpu)||actual.arpu;
+
+    const revGrowth = inputs.capa*0.42 + inputs.netAdd*0.28 + inputs.arpu*0.30;
+    const commImpact = inputs.mgmt*(planMgmt/Math.max(planRev,1)) + inputs.policy*(planPolicy/Math.max(planRev,1));
+    const riskDrag = inputs.mkt<0 ? Math.abs(inputs.mkt)*0.25 : 0;
+    const scenarioRev = Math.max(0, planRev * (1 + revGrowth + commImpact - riskDrag) * monthW);
+
+    const opLiftFromRev = (scenarioRev-planRev) * planMargin;
+    const costSaving = planOp * inputs.costEff;
+    const inflationPenalty = planOp * inputs.infl * 0.9;
+    const marketingPenalty = planOp * Math.max(0, inputs.mkt) * 0.45;
+    const scenarioOp = planOp + opLiftFromRev + costSaving - inflationPenalty - marketingPenalty;
+    const scenarioMargin = scenarioRev>0 ? scenarioOp/scenarioRev : 0;
+
+    const scenarioNet = Math.round(planNet * (1 + inputs.netAdd + Math.max(0, inputs.mkt)*0.35 - Math.max(0, inputs.infl)*0.12));
+    const scenarioCapa = Math.round(planCapa * (1 + inputs.capa));
+    const scenarioMgmt = planMgmt * (1 + inputs.mgmt + inputs.netAdd*0.2);
+    const scenarioPolicy = planPolicy * (1 + inputs.policy + Math.max(0,inputs.mkt)*0.15);
+
+    return {
+      month:m.month || `${idx+1}월`,
+      actualRev:actual.revenue,
+      planRev,
+      scenarioRev,
+      actualOp:actual.op,
+      planOp,
+      scenarioOp,
+      planNet,
+      scenarioNet,
+      planCapa,
+      scenarioCapa,
+      planMgmt,
+      scenarioMgmt,
+      planPolicy,
+      scenarioPolicy,
+      scenarioMargin,
+      planMargin
+    };
+  });
+
+  const sum = (arr,key)=>arr.reduce((s,r)=>s+(Number(r[key])||0),0);
+  const planRevenue = sum(monthly,'planRev');
+  const planOp = sum(monthly,'planOp');
+  const scenarioRevenue = sum(monthly,'scenarioRev');
+  const scenarioOp = sum(monthly,'scenarioOp');
+  const planNet = sum(monthly,'planNet');
+  const scenarioNet = sum(monthly,'scenarioNet');
+
+  const bmImpact = baseline.bm.map(b=>{
+    const mktBoost = inputs.mkt>0 ? (b.name.includes('디지털')?0.8:0.35) : 0;
+    const inflPenalty = inputs.infl * (b.name.includes('도매')?1.2:0.9);
+    const marginDelta = inputs.costEff*0.55 - inflPenalty + mktBoost;
+    const revDelta = inputs.capa*0.35 + inputs.arpu*0.4 + inputs.netAdd*0.25;
+    const scenarioRev = (b.revenue||0) * (1 + revDelta);
+    const scenarioMargin = Math.max(-0.15, (b.margin||0) + marginDelta);
+    const scenarioOp = scenarioRev * scenarioMargin;
+    return {
+      key:b.key,
+      name:b.name,
+      planOp:Number(b.op)||0,
+      scenarioOp,
+      delta:scenarioOp-(Number(b.op)||0)
+    };
+  });
+
+  const kpiRows = ['소매 KPI','도매 KPI','소상공 KPI','운영 KPI'];
+  const kpiHeatmap = kpiRows.map((nm,i)=>{
+    const base = (actual.kpi||70) + i*0.9;
+    const plan = base + 2.5;
+    const scenario = plan + (inputs.kpi*12) + (inputs.task*5) + (inputs.netAdd*3);
+    return {name:nm, actual:base, plan, scenario};
+  });
+
+  return {
+    summary:{
+      actual:{revenue:actual.revenue*12, op:actual.op*12, margin:actual.margin, netAdd:actual.netAdd*12},
+      plan:{revenue:planRevenue, op:planOp, margin:planRevenue>0?planOp/planRevenue:0, netAdd:planNet},
+      scenario:{revenue:scenarioRevenue, op:scenarioOp, margin:scenarioRevenue>0?scenarioOp/scenarioRevenue:0, netAdd:scenarioNet}
+    },
+    monthly,
+    bmImpact,
+    kpiHeatmap,
+    levers:inputs
+  };
+}
+
+function generateExecutiveInsights(simData){
+  const s = simData.summary;
+  const revGap = s.scenario.revenue - s.plan.revenue;
+  const opGap = s.scenario.op - s.plan.op;
+  const topBm = [...simData.bmImpact].sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta))[0];
+  const riskKpi = [...simData.kpiHeatmap].sort((a,b)=>a.scenario-b.scenario)[0];
+  return [
+    `핵심 변동 원인: ${topBm?.name||'-'} 손익 변화 ${fB(topBm?.delta||0)}억이 전사 영업이익 변동에 가장 크게 기여합니다.`,
+    `가장 민감한 변수: 현재 가정에서 매출 Gap은 ${revGap>=0?'+':''}${fB(revGap)}억, 영업이익 Gap은 ${opGap>=0?'+':''}${fB(opGap)}억입니다.`,
+    `목표 미달 위험 영역: KPI 중 ${riskKpi?.name||'-'}가 상대적으로 낮아 편차 관리가 필요합니다.`,
+    `우선 액션 제안: CAPA·순증·비용효율의 동시 관리(채널별 실행계획 + 저효율 과제 보정)로 계획 달성률을 방어하세요.`
+  ];
+}
+
+function renderWhatIfSummary(simData){
+  const wrap = document.getElementById('simSummary');
+  if(!wrap) return;
+  const {actual,plan,scenario} = simData.summary;
+  const gapRev = scenario.revenue-plan.revenue;
+  const gapOp = scenario.op-plan.op;
+  const gapNet = scenario.netAdd-plan.netAdd;
+  wrap.innerHTML = `
+    <div class="sim-card"><div class="k">Actual (연환산)</div><div class="v">${fB(actual.revenue)}억</div><div class="d">영업이익 ${fB(actual.op)}억 · 마진 ${(actual.margin*100).toFixed(1)}%</div></div>
+    <div class="sim-card"><div class="k">Plan 2026</div><div class="v">${fB(plan.revenue)}억</div><div class="d">영업이익 ${fB(plan.op)}억 · 순증 ${comma(plan.netAdd)}</div></div>
+    <div class="sim-card"><div class="k">Scenario</div><div class="v">${fB(scenario.revenue)}억</div><div class="d">영업이익 ${fB(scenario.op)}억 · 마진 ${(scenario.margin*100).toFixed(1)}%</div></div>
+    <div class="sim-card"><div class="k">Gap (Scenario-Plan)</div><div class="v" style="color:${gapOp>=0?'#86efac':'#fca5a5'}">${gapOp>=0?'+':''}${fB(gapOp)}억</div><div class="d" style="color:${gapRev>=0?'#86efac':'#fca5a5'}">매출 ${gapRev>=0?'+':''}${fB(gapRev)}억 · 순증 ${gapNet>=0?'+':''}${comma(gapNet)}</div></div>`;
+}
+
+function renderWhatIfCharts(simData){
+  const monthlyEl = document.getElementById('simMonthlyChart');
+  if(monthlyEl){
+    const mx = Math.max(...simData.monthly.map(m=>Math.max(m.actualRev,m.planRev,m.scenarioRev)),1);
+    monthlyEl.innerHTML = simData.monthly.map(m=>`
+      <div class="sim-row">
+        <div class="m">${m.month}</div>
+        <div class="sim-track"><i style="width:${m.actualRev/mx*100}%;background:#64748b"></i><i style="width:${m.planRev/mx*100}%;background:#0ea5e9"></i><i style="width:${m.scenarioRev/mx*100}%;background:#22c55e"></i></div>
+        <div class="n">P ${fB(m.planRev)}</div>
+        <div class="n">S ${fB(m.scenarioRev)}</div>
+      </div>`).join('');
+  }
+
+  const bmEl = document.getElementById('simBmChart');
+  if(bmEl){
+    const mx = Math.max(...simData.bmImpact.map(b=>Math.abs(b.delta)),1);
+    bmEl.innerHTML = simData.bmImpact.map(b=>`
+      <div class="sim-bm-row"><div>${b.name}</div><div class="bar"><div class="fill" style="width:${Math.abs(b.delta)/mx*100}%;background:${b.delta>=0?'linear-gradient(90deg,#34d399,#22c55e)':'linear-gradient(90deg,#f97316,#ef4444)'}"></div></div><div style="font-size:10px;text-align:right;color:${b.delta>=0?'#86efac':'#fca5a5'}">${b.delta>=0?'+':''}${fB(b.delta)}</div></div>`).join('');
+  }
+
+  const heat = document.getElementById('simKpiHeatmap');
+  if(heat){
+    const cellClass=v=>v>=85?'good':v>=75?'mid':'bad';
+    heat.innerHTML = `<div class="sim-heat"><div></div><div class="th">Actual</div><div class="th">Plan</div><div class="th">Scenario</div>${simData.kpiHeatmap.map(r=>`<div class="rh">${r.name}</div><div class="cell ${cellClass(r.actual)}">${r.actual.toFixed(1)}</div><div class="cell ${cellClass(r.plan)}">${r.plan.toFixed(1)}</div><div class="cell ${cellClass(r.scenario)}">${r.scenario.toFixed(1)}</div>`).join('')}</div>`;
+  }
+
+  const subComm = document.getElementById('simSubCommChart');
+  if(subComm){
+    const m = simData.monthly;
+    const planNet=m.reduce((s,x)=>s+x.planNet,0), scNet=m.reduce((s,x)=>s+x.scenarioNet,0);
+    const planMgmt=m.reduce((s,x)=>s+x.planMgmt,0), scMgmt=m.reduce((s,x)=>s+x.scenarioMgmt,0);
+    const planPolicy=m.reduce((s,x)=>s+x.planPolicy,0), scPolicy=m.reduce((s,x)=>s+x.scenarioPolicy,0);
+    subComm.innerHTML = `
+      <div class="sim-bm-row"><div>순증</div><div class="bar"><div class="fill" style="width:100%;background:linear-gradient(90deg,#38bdf8,#22d3ee)"></div></div><div style="font-size:10px;text-align:right">P ${comma(planNet)} / S ${comma(scNet)}</div></div>
+      <div class="sim-bm-row"><div>관리수수료</div><div class="bar"><div class="fill" style="width:${Math.min(100,Math.abs(scMgmt-planMgmt)/Math.max(planMgmt,1)*100)}%;background:linear-gradient(90deg,#a78bfa,#6366f1)"></div></div><div style="font-size:10px;text-align:right">${fB(scMgmt-planMgmt)}억</div></div>
+      <div class="sim-bm-row"><div>정책수수료</div><div class="bar"><div class="fill" style="width:${Math.min(100,Math.abs(scPolicy-planPolicy)/Math.max(planPolicy,1)*100)}%;background:linear-gradient(90deg,#f59e0b,#f97316)"></div></div><div style="font-size:10px;text-align:right">${fB(scPolicy-planPolicy)}억</div></div>`;
+  }
+}
+
+function renderWhatIfInsights(simData){
+  const insightEl=document.getElementById('simInsights');
+  if(!insightEl) return;
+  const lines = generateExecutiveInsights(simData);
+  insightEl.innerHTML = `<ul>${lines.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+
+  const note=document.getElementById('simNote');
+  if(note){
+    note.textContent = `가정 로직: 매출은 CAPA/순증/ARPU/수수료 레버 가중 합으로, 영업이익은 매출 레버리지 + 비용효율 - 인플레/판촉비 부담으로 계산됩니다. (실무 시 parsePlanExcel/parseMidtermExcel 매핑 테이블로 조정 가능)`;
+  }
 }
 
 function initSimulationTab(){
-  if(!document.getElementById('simResult')) return;
+  ensureSimulationDataShape();
+  if(!document.getElementById('simSummary')) return;
   if(!simulationState.inited){
     simulationState.inited = true;
-    resetSimulationInputs();
+    setScenarioInputs(simulationState.scenarioInputs);
   }
   updateSimulation();
 }
 
 function resetSimulationInputs(){
-  [['simCapa',0],['simMgmt',0],['simPolicy',0],['simCost',0]].forEach(([id,v])=>{
-    const el=document.getElementById(id);
-    if(el) el.value=v;
-  });
+  const zero={capa:0,netAdd:0,arpu:0,mgmt:0,policy:0,mkt:0,costEff:0,infl:0,kpi:0,task:0};
+  setScenarioInputs(zero);
   updateSimulation();
 }
 
 function applySimulationPreset(type){
-  const presets = {
-    base:[0,0,0,0],
-    best:[10,8,6,4],
-    worst:[-12,-10,-8,-5]
+  const presets={
+    conservative:{capa:-0.08,netAdd:-0.06,arpu:-0.02,mgmt:-0.03,policy:-0.05,mkt:-0.08,costEff:0.03,infl:0.05,kpi:-0.04,task:-0.06},
+    base:{capa:0,netAdd:0,arpu:0,mgmt:0,policy:0,mkt:0,costEff:0,infl:0,kpi:0,task:0},
+    aggressive:{capa:0.12,netAdd:0.1,arpu:0.04,mgmt:0.06,policy:0.05,mkt:0.1,costEff:0.04,infl:0.01,kpi:0.06,task:0.08}
   };
   const p = presets[type]||presets.base;
-  ['simCapa','simMgmt','simPolicy','simCost'].forEach((id,i)=>{
-    const el=document.getElementById(id);
-    if(el) el.value = p[i];
-  });
+  setScenarioInputs(p);
+  D.scenarioState = { ...(D.scenarioState||{}), preset:type, inputs:p };
   updateSimulation();
 }
 
 function updateSimulation(){
-  const base = getSimulationBase();
-  const read = id => Number(document.getElementById(id)?.value||0)/100;
-  const capa = read('simCapa');
-  const mgmt = read('simMgmt');
-  const policy = read('simPolicy');
-  const cost = read('simCost');
+  const inputs = readScenarioInputs();
+  simulationState.scenarioInputs = inputs;
+  Object.entries(inputs).forEach(([k,v])=>{
+    const id='sim'+k.charAt(0).toUpperCase()+k.slice(1)+'Val';
+    const el=document.getElementById(id);
+    if(el) el.textContent = `${v>=0?'+':''}${Math.round(v*100)}%`;
+  });
 
-  const mgmtWeight = base.rev>0 ? base.mgmt/base.rev : 0;
-  const policyWeight = base.rev>0 ? base.policy/base.rev : 0;
-
-  const revFromCapa = base.rev * capa;
-  const revFromMgmt = base.rev * mgmtWeight * mgmt;
-  const revFromPolicy = base.rev * policyWeight * policy;
-  const simRev = Math.max(0, base.rev + revFromCapa + revFromMgmt + revFromPolicy);
-
-  const opFromRev = (revFromCapa + revFromMgmt + revFromPolicy) * base.opMargin;
-  const opFromCost = base.op * cost;
-  const simOp = base.op + opFromRev + opFromCost;
-  const simMargin = simRev>0 ? (simOp/simRev) : 0;
-
-  const setVal=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent = `${v>=0?'+':''}${(v*100).toFixed(0)}%`; };
-  setVal('simCapaVal', capa);
-  setVal('simMgmtVal', mgmt);
-  setVal('simPolicyVal', policy);
-  setVal('simCostVal', cost);
-
-  const diffRev = simRev-base.rev;
-  const diffOp = simOp-base.op;
-  const result = document.getElementById('simResult');
-  if(result){
-    result.innerHTML = `
-      <div class="sim-card"><div class="k">시뮬레이션 매출</div><div class="v">${fB(simRev)}억</div><div class="d" style="color:${diffRev>=0?'#86efac':'#fca5a5'}">${diffRev>=0?'+':''}${fB(diffRev)}억 vs 기준</div></div>
-      <div class="sim-card"><div class="k">시뮬레이션 영업이익</div><div class="v">${fB(simOp)}억</div><div class="d" style="color:${diffOp>=0?'#86efac':'#fca5a5'}">${diffOp>=0?'+':''}${fB(diffOp)}억 vs 기준</div></div>
-      <div class="sim-card"><div class="k">시뮬레이션 영업이익률</div><div class="v">${(simMargin*100).toFixed(1)}%</div><div class="d">기준 ${(base.opMargin*100).toFixed(1)}%</div></div>
-      <div class="sim-card"><div class="k">수수료 영향 가중치</div><div class="v">${((mgmtWeight+policyWeight)*100).toFixed(1)}%</div><div class="d">관리 ${ (mgmtWeight*100).toFixed(1)}% · 정책 ${(policyWeight*100).toFixed(1)}%</div></div>`;
-  }
-
-  const note=document.getElementById('simNote');
-  if(note){
-    note.textContent = `기준값: 매출 ${fB(base.rev)}억 / 영업이익 ${fB(base.op)}억 · CAPA와 수수료는 전사 매출 대비 비중 가중치로 반영했습니다.`;
-  }
+  const baseline = buildSimulationBaseline();
+  const simData = runScenarioSimulation(baseline, inputs);
+  renderWhatIfSummary(simData);
+  renderWhatIfCharts(simData);
+  renderWhatIfInsights(simData);
+  D.scenarioState = { ...(D.scenarioState||{}), inputs, simulatedData:simData };
 }
+
 function switchKpiTab(tab){
   ['rt','wh','smb'].forEach(t=>{
     const panel=document.getElementById('kpiPanel-'+t);
@@ -5029,7 +5234,10 @@ function saveUploadedState(){
       kpi_wholesale_detail:D.kpi_wholesale_detail,
       variance:D.variance,
       sga_detail:D.sga_detail,
-      commission:D.commission
+      commission:D.commission,
+      planData:D.planData||null,
+      midtermAssumptions:D.midtermAssumptions||null,
+      scenarioState:D.scenarioState||null
     };
     localStorage.setItem(UPLOADED_STATE_STORAGE_KEY, JSON.stringify(payload));
   }catch(e){ console.warn('saveUploadedState failed', e); }
@@ -5050,6 +5258,9 @@ function loadUploadedState(){
     if(data.variance && typeof data.variance==='object') D.variance = data.variance;
     if(data.sga_detail && typeof data.sga_detail==='object') D.sga_detail = data.sga_detail;
     if(data.commission && typeof data.commission==='object') D.commission = data.commission;
+    if(data.planData && typeof data.planData==='object') D.planData = data.planData;
+    if(data.midtermAssumptions && typeof data.midtermAssumptions==='object') D.midtermAssumptions = data.midtermAssumptions;
+    if(data.scenarioState && typeof data.scenarioState==='object') D.scenarioState = data.scenarioState;
   }catch(e){ console.warn('loadUploadedState failed', e); }
 }
 function updateTabMonthBadges(){
@@ -5168,10 +5379,153 @@ function parseExcel(file,type){
       else if(type==='factbook') parseFactbookExcel(wb);
       else if(type==='comm') parseCommExcel(wb, filename);
       else if(type==='hqprofit') parseHqProfitExcel(wb, filename);
+      else if(type==='plan') parsePlanExcel(wb, filename);
+      else if(type==='midterm') parseMidtermExcel(wb, filename);
       else parseKpiExcel(wb, filename);
     }catch(err){showUpStatus(type,'err','❌ '+err.message);}
   };
   reader.readAsArrayBuffer(file);
+}
+
+function parsePlanExcel(wb, filename){
+  try{
+    ensureSimulationDataShape();
+    const month = extractMonthFromFilename(filename);
+    const monthLabels = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+    const norm=v=>String(v||'').replace(/\s+/g,'').trim();
+    const toNum=v=>{
+      if(v===null||v===undefined||v==='') return null;
+      const n = Number(String(v).replace(/,/g,''));
+      return Number.isFinite(n)?n:null;
+    };
+    const pickSheet=name=>wb.Sheets[wb.SheetNames.find(s=>String(s).includes(name))||name];
+
+    const monthly = monthLabels.map(m=>({month:m,revenue:null,op:null,netAdd:null,capa:null,mgmtFee:null,policyFee:null,arpu:null}));
+
+    const isWs = pickSheet('전사 손익계산서');
+    if(isWs){
+      const rows = XLSX.utils.sheet_to_json(isWs,{header:1,defval:''});
+      const hdr = rows.find(r=>r.some(c=>monthLabels.includes(String(c).trim()))) || [];
+      const monthCols={};
+      hdr.forEach((c,i)=>{ const m=String(c||'').trim(); if(monthLabels.includes(m)) monthCols[m]=i; });
+      const findRow=(name)=>rows.find(r=>norm(r[0]).includes(norm(name)));
+      const revRow = findRow('매출');
+      const opRow = findRow('영업이익');
+      monthLabels.forEach((m,i)=>{
+        const c = monthCols[m];
+        if(c!==undefined){
+          if(revRow) monthly[i].revenue = toNum(revRow[c]);
+          if(opRow) monthly[i].op = toNum(opRow[c]);
+        }
+      });
+    }
+
+    const capaWs = pickSheet('무선 CAPA') || pickSheet('무선');
+    if(capaWs){
+      const rows = XLSX.utils.sheet_to_json(capaWs,{header:1,defval:''});
+      const hdr = rows.find(r=>r.some(c=>monthLabels.includes(String(c).trim()))) || [];
+      const monthCols={};
+      hdr.forEach((c,i)=>{ const m=String(c||'').trim(); if(monthLabels.includes(m)) monthCols[m]=i; });
+      const findRow=(kw)=>rows.find(r=>norm(r[0]).includes(norm(kw)));
+      const capaRow=findRow('CAPA'), netRow=findRow('순증'), mgRow=findRow('관리수수료'), poRow=findRow('정책수수료'), arRow=findRow('ARPU');
+      monthLabels.forEach((m,i)=>{
+        const c=monthCols[m];
+        if(c===undefined) return;
+        if(capaRow) monthly[i].capa = toNum(capaRow[c]);
+        if(netRow) monthly[i].netAdd = toNum(netRow[c]);
+        if(mgRow) monthly[i].mgmtFee = toNum(mgRow[c]);
+        if(poRow) monthly[i].policyFee = toNum(poRow[c]);
+        if(arRow) monthly[i].arpu = toNum(arRow[c]);
+      });
+    }
+
+    const fallback = buildSimulationBaseline().actual;
+    monthly.forEach(m=>{
+      if(m.revenue===null) m.revenue=fallback.revenue;
+      if(m.op===null) m.op=fallback.op;
+      if(m.netAdd===null) m.netAdd=fallback.netAdd;
+      if(m.capa===null) m.capa=fallback.capa;
+      if(m.mgmtFee===null) m.mgmtFee=fallback.mgmtFee;
+      if(m.policyFee===null) m.policyFee=fallback.policyFee;
+      if(m.arpu===null) m.arpu=fallback.arpu;
+    });
+
+    const bm = CHS.map(ch=>({
+      key:ch,
+      name:CN[ch],
+      revenue:Number(D?.profit?.revenue?.[ch])||0,
+      op:Number(D?.profit?.op?.[ch])||0,
+      margin:(Number(D?.profit?.revenue?.[ch])||0)>0?((Number(D?.profit?.op?.[ch])||0)/(Number(D?.profit?.revenue?.[ch])||1)):0
+    }));
+
+    D.planData = {
+      sourceFile: filename,
+      monthly,
+      bm,
+      kpiTargets:['소매 KPI','도매 KPI','소상공 KPI','운영 KPI'].map((k,i)=>({name:k,target:82+i*1.5}))
+    };
+
+    if(month){ setGlobalBaseMonth(month, '경영계획'); setReportPeriod(month); }
+    setTabMonth('plan', month || (D.period||'').replace(' 기준',''));
+    setTabMonth('simulate', month || (D.period||'').replace(' 기준',''));
+    saveUploadedState();
+    updateTabMonthBadges();
+    initSimulationTab();
+    showUpStatus('plan','ok',`✅ 2026 경영계획 로드 완료 · 월별 ${D.planData.monthly.length}건`);
+  }catch(err){
+    showUpStatus('plan','err','❌ 경영계획 파싱 오류: '+err.message);
+  }
+}
+
+function parseMidtermExcel(wb, filename){
+  try{
+    ensureSimulationDataShape();
+    const norm=v=>String(v||'').replace(/\s+/g,'').trim();
+    const toNum=v=>{
+      if(v===null||v===undefined||v==='') return null;
+      const n = Number(String(v).replace(/,/g,''));
+      return Number.isFinite(n)?n:null;
+    };
+    const assumptions=[];
+
+    const keyWs = wb.Sheets[wb.SheetNames.find(s=>String(s).toLowerCase().includes('key index'))||'key Index'];
+    if(keyWs){
+      const rows = XLSX.utils.sheet_to_json(keyWs,{header:1,defval:''});
+      rows.forEach(r=>{
+        const nm = String(r[0]||'').trim();
+        if(!nm) return;
+        const v = toNum(r[1]);
+        if(v===null) return;
+        assumptions.push({driver:nm,baseValue:v,unit:String(r[2]||''),sourceSheet:'key Index'});
+      });
+    }
+
+    const bmWs = wb.Sheets[wb.SheetNames.find(s=>String(s).includes('BM별손익'))||'BM별손익'];
+    const bm=[];
+    if(bmWs){
+      const rows=XLSX.utils.sheet_to_json(bmWs,{header:1,defval:''});
+      rows.forEach(r=>{
+        const nm=String(r[2]||r[0]||'').trim();
+        if(!nm||/BM|구분|합계/.test(nm)) return;
+        const rev=toNum(r[3])||toNum(r[4])||0;
+        const op=toNum(r[7])||toNum(r[8])||0;
+        if(rev===0&&op===0) return;
+        bm.push({name:nm,revenue:rev,op,margin:rev?op/rev:0,sourceSheet:'BM별손익'});
+      });
+    }
+
+    D.midtermAssumptions = {
+      sourceFile: filename,
+      assumptions: assumptions.slice(0,60),
+      bm
+    };
+
+    saveUploadedState();
+    initSimulationTab();
+    showUpStatus('midterm','ok',`✅ 중기/그룹 가정 로드 완료 · Key ${D.midtermAssumptions.assumptions.length}건`);
+  }catch(err){
+    showUpStatus('midterm','err','❌ 중기계획 파싱 오류: '+err.message);
+  }
 }
 
 function extractCommissionDataFromWorkbook(wb){
@@ -5546,7 +5900,9 @@ function normalizeProfitData(){
   if(channelSum>0) contrib.total=channelSum+pfOp;
 }
 normalizeProfitData();
+ensureSimulationDataShape();
 loadUploadedState();
+ensureSimulationDataShape();
 const savedBaseMonth = getSavedBaseMonth();
 if(savedBaseMonth) applyBaseMonthToUi(savedBaseMonth, '최근 업로드');
 loadSubscriberData();
@@ -7054,7 +7410,9 @@ function initDashboard(){
         {k:'kpi',n:'조직 KPI',required:true},
         {k:'hqprofit',n:'본부 손익',required:false},
         {k:'factbook',n:'Factbook',required:false},
-        {k:'comm',n:'수수료',required:false}
+        {k:'comm',n:'수수료',required:false},
+        {k:'plan',n:'26년 경영계획',required:false},
+        {k:'midterm',n:'중기/그룹계획',required:false}
       ];
       const statusMeta={ok:{t:'준비완료',c:'ok'},warn:{t:'주의',c:'warn'},err:{t:'오류',c:'err'},unknown:{t:'미업로드',c:'unknown'}};
       readyGrid.innerHTML=req.map(item=>{
