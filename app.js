@@ -4825,8 +4825,10 @@ function parseFactbookExcel(wb){
     const extracted = extractSubscriberDataFromWorkbook(wb);
     subscriberData = extracted;
     saveSubscriberData();
+    if(extracted.baseMonth) setTabMonth('subscriber', extracted.baseMonth);
     initSubscriberUI();
     initDashboard();
+    updateTabMonthBadges();
     showUpStatus('factbook','ok','✅ 가입자 데이터 업데이트 완료\n기준월: '+extracted.baseMonth+'\n시트: '+(extracted.sheetNames||[]).join(', '));
   }catch(err){
     showUpStatus('factbook','err','❌ '+err.message);
@@ -4838,6 +4840,69 @@ function handleDrop(e,type){e.preventDefault();e.currentTarget.classList.remove(
 function handleFile(input,type){if(input.files[0])parseExcel(input.files[0],type);}
 
 const BASE_MONTH_STORAGE_KEY = 'ktms_base_month';
+const UPLOADED_STATE_STORAGE_KEY = 'ktms_uploaded_state_v1';
+const TAB_MONTH_STORAGE_KEY = 'ktms_tab_month_v1';
+
+function getSavedTabMonths(){
+  try{ return JSON.parse(localStorage.getItem(TAB_MONTH_STORAGE_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function setTabMonth(type, month){
+  if(!type || !month) return;
+  try{
+    const obj = getSavedTabMonths();
+    obj[type] = month;
+    localStorage.setItem(TAB_MONTH_STORAGE_KEY, JSON.stringify(obj));
+  }catch(e){}
+  updateTabMonthBadges();
+}
+function saveUploadedState(){
+  try{
+    const payload={
+      tasks:D.tasks,
+      taskMonth:D.taskMonth||null,
+      profit:D.profit,
+      hq:D.hq,
+      kpi:D.kpi,
+      kpi_retail_detail:D.kpi_retail_detail,
+      kpi_wholesale_detail:D.kpi_wholesale_detail,
+      variance:D.variance,
+      sga_detail:D.sga_detail
+    };
+    localStorage.setItem(UPLOADED_STATE_STORAGE_KEY, JSON.stringify(payload));
+  }catch(e){ console.warn('saveUploadedState failed', e); }
+}
+function loadUploadedState(){
+  try{
+    const raw = localStorage.getItem(UPLOADED_STATE_STORAGE_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(!data || typeof data!=='object') return;
+    if(Array.isArray(data.tasks) && data.tasks.length) D.tasks = data.tasks;
+    if(data.taskMonth) D.taskMonth = data.taskMonth;
+    if(data.profit && typeof data.profit==='object') D.profit = data.profit;
+    if(Array.isArray(data.hq) && data.hq.length) D.hq = data.hq;
+    if(Array.isArray(data.kpi) && data.kpi.length) D.kpi = data.kpi;
+    if(data.kpi_retail_detail && typeof data.kpi_retail_detail==='object') D.kpi_retail_detail = data.kpi_retail_detail;
+    if(data.kpi_wholesale_detail && typeof data.kpi_wholesale_detail==='object') D.kpi_wholesale_detail = data.kpi_wholesale_detail;
+    if(data.variance && typeof data.variance==='object') D.variance = data.variance;
+    if(data.sga_detail && typeof data.sga_detail==='object') D.sga_detail = data.sga_detail;
+  }catch(e){ console.warn('loadUploadedState failed', e); }
+}
+function updateTabMonthBadges(){
+  const m = getSavedTabMonths();
+  const periodMonth = (D.baseMonth || (typeof D.period==='string' && D.period.match(/\d{4}\.\d{2}/) ? D.period.match(/\d{4}\.\d{2}/)[0] : null) || '-');
+  const mapping = [
+    ['tabMonthTasks', m.tasks || D.taskMonth || periodMonth],
+    ['tabMonthProfit', m.profit || periodMonth],
+    ['tabMonthKpi', m.kpi || periodMonth],
+    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || periodMonth)],
+    ['tabMonthCommission', m.commission || periodMonth]
+  ];
+  mapping.forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent='기준월 '+(val||'-');
+  });
+}
 function monthToNumber(month){
   if(!month || !/^\d{4}\.\d{2}$/.test(month)) return null;
   const parts = month.split('.');
@@ -4862,8 +4927,11 @@ function applyBaseMonthToUi(month, sourceLabel){
   D.period = month + ' 기준';
   const badge = document.querySelector('#hdrMonthBadge, .hdr-badge');
   if(badge) badge.textContent = month;
+  const dashMonth = document.getElementById('dashMonth2');
+  if(dashMonth) dashMonth.textContent = month;
   const upBadge = document.getElementById('upBasemonthBadge');
   if(upBadge) upBadge.textContent = '기준월: ' + month + (sourceLabel ? ' · ' + sourceLabel : '');
+  updateTabMonthBadges();
 }
 
 // ── 파일명에서 연/월 감지 ──
@@ -4916,23 +4984,25 @@ function parseExcel(file,type){
 // ── 수수료 파일: 파일명 기준월만 감지 ──
 function parseCommExcel(wb, filename){
   const month = extractMonthFromFilename(filename);
-  if(month){ setGlobalBaseMonth(month, '수수료'); setReportPeriod(month); }
+  if(month){ setGlobalBaseMonth(month, '수수료'); setReportPeriod(month); setTabMonth('commission', month); }
   // 실제 수수료 데이터 파싱은 D.commission 하드코딩 유지
   initCommission();
+  saveUploadedState();
+  updateTabMonthBadges();
   showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 기준월 → ${month}` : '⚠️ 파일명에서 월 감지 실패 · 기존 데이터 유지');
 }
 function parseTaskExcel(wb, filename){
   const month = extractMonthFromFilename(filename);
-  if(month) setGlobalBaseMonth(month, '사업과제');
+  if(month){ D.taskMonth = month; setTabMonth('tasks', month); }
   const ws=wb.Sheets['data']||(function(){var m=wb.SheetNames.filter(function(s){return/마감/.test(s)&&!/핵심/.test(s);}).sort(function(a,b){var sa=wb.Sheets[a],sb=wb.Sheets[b];var ra=sa['!ref']?parseInt(sa['!ref'].replace(/.*:/,'').replace(/[A-Z]+/g,'')):0;var rb=sb['!ref']?parseInt(sb['!ref'].replace(/.*:/,'').replace(/[A-Z]+/g,'')):0;return rb-ra;});return m.length?wb.Sheets[m[0]]:null;})()||wb.Sheets[wb.SheetNames[0]];if(!ws){showUpStatus('task','err','❌ 시트를 찾을 수 없습니다');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});const tasks=[];for(let i=5;i<rows.length;i++){const r=rows[i];if(!r[5]||!r[1])continue;tasks.push({no:r[1],ch:r[2]||'',tm:r[3]||'',co:r[4]==='●'?'●':'',nm:String(r[5]).replace(/\n/g,' ').trim(),mg:String(r[6]||'').trim(),sc:String(r[7]||'').trim(),plan:String(r[8]||'').trim(),pg:String(r[9]||'').trim(),st:r[10]||'계획',cp:r[11]||'미완료',pp:parseFloat(r[12])||0});}
-  if(tasks.length>0){D.tasks=tasks;initTaskUI();initDashboard();showUpStatus('task','ok','✅ '+tasks.length+'개 과제 로드!'+(month?` · 기준월 ${month}`:''));}
+  if(tasks.length>0){D.tasks=tasks;saveUploadedState();initTaskUI();initDashboard();updateTabMonthBadges();showUpStatus('task','ok','✅ '+tasks.length+'개 과제 로드!'+(month?` · 과제 기준월 ${month} (전사 보고 기준월은 유지)`:''));}
   else showUpStatus('task','err','❌ 데이터 없음');
 }
 
 
 function parseProfitExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month){ setGlobalBaseMonth(month, 'BM별손익'); setReportPeriod(month); }
+  if(month){ setGlobalBaseMonth(month, 'BM별손익'); setReportPeriod(month); setTabMonth('profit', month); }
   var ws=wb.Sheets['종합']||wb.Sheets[wb.SheetNames.find(function(s){return String(s).indexOf('종합')>=0;})];
   if(!ws){showUpStatus('profit','err','❌ 종합 시트 없음');return;}
   var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});
@@ -5018,7 +5088,8 @@ function parseProfitExcel(wb, filename){try{
     if(!niRow)niRow=niRows.find(function(r4){return r4[0]&&norm(r4[0])==='손익';});
     if(niRow)D.profit.net_income=Math.round(niRow[1]||0);
   }
-  initProfitUI();renderTrendChart();initDashboard();
+  saveUploadedState();
+  initProfitUI();renderTrendChart();initDashboard();updateTabMonthBadges();
   if(warnings.length>0){
     showUpStatus('profit','warn','✅ 손익 업데이트 완료 ('+D.profit.op_source+')'+(month?` · 기준월 ${month}`:'')+'\n\n🔍 <b>구조 검증 결과 ('+warnings.length+'건)</b>\n'+warnings.join('\n'));
   } else {
@@ -5028,7 +5099,7 @@ function parseProfitExcel(wb, filename){try{
 
 function parseProfitYtdExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
-  if(month){ setGlobalBaseMonth(month, 'BM누적'); setReportPeriod(month); }
+  if(month){ setGlobalBaseMonth(month, 'BM누적'); setReportPeriod(month); setTabMonth('profit', month); }
   var MONTHS=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
   var CH_HDR={'\uc18c\ub9e4':'retail','\ub3c4\ub9e4':'wholesale','\ub514\uc9c0\ud138':'digital','\ub514\uc9c0\ud138(KT\uc0f5)':'digital','\uae30\uc5c5/\uacf5\uacf5':'enterprise','IoT':'iot','\ubc95\uc778\uc601\uc5c5':'corporate_sales','\uc18c\uc0c1\uacf5\uc778':'small_biz'};
   var norm=function(x){return String(x||'').trim().replace(/\s+/g,'').replace(/\n/g,'');};
@@ -5058,7 +5129,8 @@ function parseProfitYtdExcel(wb, filename){try{
     var rv=find2('\ub9e4\ucd9c'),gp=find2('\ub9e4\ucd9c\uc758\ucd1d\uc774\uc775'),sg=find2('\ud310\ub9e4\ube44\uc640\uc77c\ubc18\uad00\ub9ac\ube44'),op2=findInc2('\uc810\ud504\uc5c5');
     if(rv)D.profit.revenue=mk2(rv);if(gp)D.profit.gross=mk2(gp);if(sg)D.profit.sga=mk2(sg);
     if(op2){D.profit.op=mk2(op2);D.profit.op_source='\uc810\ud504\uc5c5 \ub3c4/\uc18c\ub9e4 \uc870\uc815 \ud6c4(\uc5f0\uac04)';}
-    initProfitUI();initDashboard();
+    saveUploadedState();
+    initProfitUI();initDashboard();updateTabMonthBadges();
   }
   if(loaded>0){D.profit.monthly_trend=trend;renderTrendChart();showUpStatus('profitYtd','ok','✅ '+loaded+'개월 트렌드 로드!'+(month?` · 기준월 ${month}`:'')+' (월별 영업이익 차트 업데이트)');}
   else showUpStatus('profitYtd','err','❌ 월별 시트 데이터 없음');
@@ -5106,7 +5178,7 @@ function parseKpiExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
   if(month){ setGlobalBaseMonth(month, 'KPI'); setReportPeriod(month); }
   const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];for(let i=11;i<=16;i++){const r=rows[i];if(!r||!r[1])continue;kpi.push({hq:r[1],ts:r[2]||0,rk:r[3]||0,rt:{t:r[4]||0,s:r[5]||0,p:r[6]||0},wh:{t:r[7]||0,s:r[8]||0,p:r[9]||0},sm:{t:r[10]||0,s:r[11]||0,p:r[12]||0}});}
-  if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;initKpiUI();initDashboard();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
+  if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;if(month) setTabMonth('kpi', month);saveUploadedState();initKpiUI();initDashboard();updateTabMonthBadges();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
   else showUpStatus('kpi','err','❌ KPI 데이터 부족');
 }catch(err){showUpStatus('kpi','err','❌ '+err.message);}}
 // ── 본부별 손익 파싱 (sum 시트 기준, 원화 단위) ──────────────────
@@ -5158,8 +5230,10 @@ function parseHqProfitExcel(wb, filename){
       };
     });
     D.hq = newHq;
-    if(month){ setGlobalBaseMonth(month, '본부손익'); setReportPeriod(month); }
+    if(month){ setGlobalBaseMonth(month, '본부손익'); setReportPeriod(month); setTabMonth('profit', month); }
+    saveUploadedState();
     initProfitUI();
+    updateTabMonthBadges();
 
     const lines = newHq.map(h=>{
       const op = h.gp - h.sga;
@@ -5191,9 +5265,12 @@ function normalizeProfitData(){
   if(channelSum>0) contrib.total=channelSum+pfOp;
 }
 normalizeProfitData();
+loadUploadedState();
 const savedBaseMonth = getSavedBaseMonth();
 if(savedBaseMonth) applyBaseMonthToUi(savedBaseMonth, '최근 업로드');
-loadSubscriberData();initTaskUI();initProfitUI();initKpiUI();initSubscriberUI();initDashboard();
+loadSubscriberData();
+initTaskUI();initProfitUI();initKpiUI();initSubscriberUI();initDashboard();
+updateTabMonthBadges();
 document.title='KT M&S 경영관리';
 
 // 수수료 탭 강제 바인딩 및 초기 렌더 준비
@@ -6194,54 +6271,90 @@ function genExecutiveManagementReport(){
   const margin=ratio(totalOp,totalRev);
   const avgKpi=K.length?K.reduce((a,b)=>a+(b.ts||0),0)/K.length:0;
   const topHq=K.length?K.slice().sort((a,b)=>b.ts-a.ts)[0]:null;
+  const lowHq=K.length?K.slice().sort((a,b)=>a.ts-b.ts)[0]:null;
   const riskList=(E.actions||[]).filter(a=>a.priority==='HIGH').slice(0,5);
+  const taskTotal=(D.tasks||[]).length;
+  const taskDone=(D.tasks||[]).filter(t=>t.st==='완료').length;
+  const taskRate=taskTotal?taskDone/taskTotal:0;
+
   const channelRows=['retail','wholesale','digital','enterprise','iot','corporate_sales','small_biz']
-    .map(k=>({nm:CN[k],rev:(P.revenue||{})[k]||0,op:(P.op||{})[k]||0,margin:ratio((P.op||{})[k]||0,(P.revenue||{})[k]||0)}))
+    .map(k=>({key:k,nm:CN[k],rev:(P.revenue||{})[k]||0,op:(P.op||{})[k]||0,margin:ratio((P.op||{})[k]||0,(P.revenue||{})[k]||0)}))
     .sort((a,b)=>b.op-a.op);
+  const bestCh=channelRows[0]||null;
+  const worstCh=channelRows.slice().sort((a,b)=>a.margin-b.margin)[0]||null;
+
+  const watchList=[];
+  if(worstCh) watchList.push(`채널 수익성 하방: ${worstCh.nm} 이익률 ${pctStr(worstCh.margin)}로 구조개선 필요`);
+  if(lowHq) watchList.push(`KPI 하위 본부: ${lowHq.hq} ${lowHq.ts.toFixed(1)}점 · 상위와 편차 관리 필요`);
+  if(E.mgmtMix<0.25) watchList.push(`관리수수료 비중 ${pctStr(E.mgmtMix||0)}로 방어력 약화 가능성`);
+  if(taskTotal && taskRate<0.5) watchList.push(`전사 과제 완료율 ${pctStr(taskRate)}로 실행속도 제고 필요`);
+
   const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Executive Management Report</title>${rptStyle()}<style>
     .ex-wrap{display:flex;flex-direction:column;gap:16px}
-    .ex-hero{padding:18px;border-radius:14px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff}
-    .ex-hero h1{margin:0;font-size:28px}
-    .ex-hero p{margin:8px 0 0;font-size:13px;opacity:.9}
+    .ex-hero{padding:20px;border-radius:16px;background:linear-gradient(135deg,#020617,#0f172a 35%,#1d4ed8);color:#fff;position:relative;overflow:hidden}
+    .ex-hero:after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(125,211,252,.38),rgba(125,211,252,0) 70%)}
+    .ex-hero h1{margin:0;font-size:30px;letter-spacing:-.4px}
+    .ex-hero p{margin:10px 0 0;font-size:13px;opacity:.9}
+    .ex-kicker{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:10px;font-weight:800;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);margin-bottom:10px}
+
     .ex-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    .ex-card{border:1px solid #dbeafe;background:#f8fafc;border-radius:12px;padding:12px}
+    .ex-card{border:1px solid #dbeafe;background:linear-gradient(180deg,#fff,#f8fafc);border-radius:12px;padding:12px}
     .ex-k{font-size:11px;color:#475569;font-weight:700}
-    .ex-v{font-size:24px;font-weight:900;color:#0f172a;margin-top:4px}
+    .ex-v{font-size:23px;font-weight:900;color:#0f172a;margin-top:4px}
     .ex-s{font-size:11px;color:#64748b;margin-top:4px}
+
     .ex-sec{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff}
+    .ex-sec h2{margin:0 0 10px;padding:0;border:none;font-size:16px;color:#0f172a}
+    .ex-split{display:grid;grid-template-columns:1.3fr .7fr;gap:12px}
+    .ex-note{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:10px;padding:10px}
+    .ex-note b{display:block;font-size:11px;color:#334155;margin-bottom:6px}
+    .ex-note ul{margin:0;padding-left:16px;color:#475569;font-size:11px;line-height:1.6}
+
     .pill{display:inline-flex;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800}
     .pill.high{background:#fee2e2;color:#b91c1c}.pill.mid{background:#fef3c7;color:#92400e}.pill.low{background:#dcfce7;color:#166534}
-    @media(max-width:700px){.ex-grid{grid-template-columns:repeat(2,1fr)}}
+    .rank-up{color:#059669;font-weight:800}.rank-down{color:#dc2626;font-weight:800}
+    @media(max-width:850px){.ex-grid{grid-template-columns:repeat(2,1fr)}.ex-split{grid-template-columns:1fr}}
   </style></head><body><div class="wrap"><div class="ex-wrap">
-    <div class="ex-hero"><h1>Executive Management Report</h1><p>${D.period||'-'} · 경영진 보고용 통합 요약 (손익·KPI·가입자·수수료·리스크)</p></div>
+    <div class="ex-hero"><span class="ex-kicker">EXECUTIVE MANAGEMENT REPORT</span><h1>경영진 통합 보고</h1><p>${D.period||'-'} · 손익·KPI·과제·수수료를 한 장에서 보는 의사결정용 리포트</p></div>
 
     <div class="ex-grid">
-      <div class="ex-card"><div class="ex-k">총 매출</div><div class="ex-v">${fB(totalRev)}억</div><div class="ex-s">업로드 기준 재무 데이터</div></div>
+      <div class="ex-card"><div class="ex-k">총 매출</div><div class="ex-v">${fB(totalRev)}억</div><div class="ex-s">업로드 손익 데이터 기준</div></div>
       <div class="ex-card"><div class="ex-k">총 영업이익</div><div class="ex-v">${fB(totalOp)}억</div><div class="ex-s">영업이익률 ${pctStr(margin)}</div></div>
-      <div class="ex-card"><div class="ex-k">KPI 평균</div><div class="ex-v">${avgKpi?avgKpi.toFixed(1):'-'}</div><div class="ex-s">Top 본부: ${topHq?topHq.hq+' '+topHq.ts.toFixed(1):'-'}</div></div>
-      <div class="ex-card"><div class="ex-k">관리수수료 비중</div><div class="ex-v">${pctStr(E.mgmtMix||0)}</div><div class="ex-s">총 수수료 ${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1):'N/A'}억</div></div>
+      <div class="ex-card"><div class="ex-k">KPI 평균</div><div class="ex-v">${avgKpi?avgKpi.toFixed(1):'-'}</div><div class="ex-s">Top ${topHq?topHq.hq+' '+topHq.ts.toFixed(1):'-'}</div></div>
+      <div class="ex-card"><div class="ex-k">전사 과제 완료율</div><div class="ex-v">${pctStr(taskRate)}</div><div class="ex-s">완료 ${taskDone}/${taskTotal||0}</div></div>
     </div>
 
     <div class="ex-sec">
-      <h2>1) Channel Profitability Deep-dive</h2>
-      <table><thead><tr><th>채널</th><th>매출(억)</th><th>영업이익(억)</th><th>이익률</th><th>진단</th></tr></thead><tbody>
-      ${channelRows.map(c=>`<tr><td>${c.nm}</td><td>${fB(c.rev)}</td><td>${fB(c.op)}</td><td>${pctStr(c.margin)}</td><td>${c.margin<0.03?'구조개선 필요':c.margin<0.06?'방어관리':'안정'}</td></tr>`).join('')}
+      <h2>1) Profitability & Focus Channel</h2>
+      <div class="ex-split">
+        <table><thead><tr><th>채널</th><th>매출(억)</th><th>영업이익(억)</th><th>이익률</th><th>진단</th></tr></thead><tbody>
+        ${channelRows.map(c=>`<tr><td>${c.nm}</td><td>${fB(c.rev)}</td><td class="${c.op>=0?'rank-up':'rank-down'}">${fB(c.op)}</td><td>${pctStr(c.margin)}</td><td>${c.margin<0.03?'구조개선 필요':c.margin<0.06?'방어관리':'안정'}</td></tr>`).join('')}
+        </tbody></table>
+        <div class="ex-note">
+          <b>채널 포커스</b>
+          <ul>
+            <li>상위 채널: ${bestCh?bestCh.nm+' · 이익 '+fB(bestCh.op)+'억':''}</li>
+            <li>개선 우선: ${worstCh?worstCh.nm+' · 이익률 '+pctStr(worstCh.margin):''}</li>
+            <li>관리수수료 비중: ${pctStr(E.mgmtMix||0)} (총 ${Number.isFinite(E.totalFee)?E.totalFee.toFixed(1):'N/A'}억)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="ex-sec">
+      <h2>2) KPI & Execution Delta</h2>
+      <table><thead><tr><th>순위</th><th>본부</th><th>점수</th><th>실행 우선도</th></tr></thead><tbody>
+      ${K.slice().sort((a,b)=>b.ts-a.ts).map((x,i)=>`<tr><td>${i+1}</td><td>${x.hq}</td><td>${x.ts.toFixed(1)}</td><td>${i<2?'우수사례 확산':(i>=K.length-2?'집중 코칭':'편차 축소')}</td></tr>`).join('')}
       </tbody></table>
+      <div class="warn" style="margin-top:10px">본부 간 점수 편차: ${topHq&&lowHq?(topHq.ts-lowHq.ts).toFixed(1)+'p':'-'} · 하위 본부는 2주 단위 개선지표(순증/수익성/핵심 KPI)로 코칭 운영</div>
     </div>
 
     <div class="ex-sec">
-      <h2>2) KPI & Execution Focus</h2>
-      <table><thead><tr><th>순위</th><th>본부</th><th>점수</th><th>핵심 코멘트</th></tr></thead><tbody>
-      ${K.slice().sort((a,b)=>b.ts-a.ts).map((x,i)=>`<tr><td>${i+1}</td><td>${x.hq}</td><td>${x.ts.toFixed(1)}</td><td>${i<2?'우수사례 확산':'편차 축소 실행관리'}</td></tr>`).join('')}
-      </tbody></table>
-    </div>
-
-    <div class="ex-sec">
-      <h2>3) Key Risks & 2-Week Action Plan</h2>
+      <h2>3) Risk Watchlist & 2-Week Action Plan</h2>
       <table><thead><tr><th>우선순위</th><th>리스크/과제</th><th>담당</th><th>기한</th></tr></thead><tbody>
       ${(riskList.length?riskList:(E.actions||[]).slice(0,5)).map(a=>`<tr><td><span class="pill ${a.priority==='HIGH'?'high':a.priority==='MID'?'mid':'low'}">${a.priority||'MID'}</span></td><td>${a.item}</td><td>${a.owner}</td><td>${a.due}</td></tr>`).join('')}
       </tbody></table>
-      <div class="warn" style="margin-top:10px">실행 원칙: ① 저수익 채널 구조개선 ② KPI 하위 본부 코칭 ③ 관리수수료·판관비 동시 점검을 2주 단위로 반복합니다.</div>
+      <div class="ex-note" style="margin-top:10px"><b>Watchlist</b><ul>${(watchList.length?watchList:['핵심 리스크 없음']).map(x=>`<li>${x}</li>`).join('')}</ul></div>
     </div>
   </div></div></body></html>`;
   openReport(h,'Executive Management Report');
@@ -6580,4 +6693,3 @@ function initDashboard(){
 document.addEventListener('DOMContentLoaded',function(){
   setTimeout(initDashboard, 50);
 });
-

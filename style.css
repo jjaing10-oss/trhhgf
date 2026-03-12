@@ -1028,3 +1028,6 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
   .ds-msg-grid{grid-template-columns:1fr}
   .ds-mini-grid{grid-template-columns:1fr}
 }
+
+.tab-month-row{display:flex;justify-content:flex-end;margin:0 0 8px}
+.tab-month-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);color:#7dd3fc;font-size:11px;font-weight:800;letter-spacing:.1px}
