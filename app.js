@@ -4939,17 +4939,46 @@ function applyBaseMonthToUi(month, sourceLabel){
 // ── 파일명에서 연/월 감지 ──
 function extractMonthFromFilename(filename){
   if(!filename) return null;
-  const fn = String(filename).replace(/[_\s\-\.]/g,' ');
-  // 패턴1: "26년 1월", "2026년 01월", "26년 1Q1월" 등
-  const m1 = fn.match(/(?:20)?(\d{2})년[^0-9]*?(?:\d[Qq]\s*)?(\d{1,2})월/);
+  const raw = String(filename);
+  const fn = raw.replace(/[_\s\-\.]/g,' ');
+
+  const toYm = (yy, mm)=>{
+    const m = Number(mm);
+    if(!(m>=1 && m<=12)) return null;
+    const y = Number(yy);
+    const yyyy = y < 100 ? (y < 50 ? 2000+y : 1900+y) : y;
+    return `${yyyy}.${String(m).padStart(2,'0')}`;
+  };
+
+  // 패턴1: "26년 1월", "2026년 01월", "26년 1Q(1월)" 등
+  const m1 = fn.match(/((?:19|20)?\d{2})년[^\d]{0,10}(?:[1-4][Qq][^\d]{0,10})?(\d{1,2})월/);
   if(m1){
-    const yy = parseInt(m1[1]); const mm = parseInt(m1[2]);
-    const yyyy = yy < 50 ? 2000+yy : 1900+yy;
-    return `${yyyy}.${String(mm).padStart(2,'0')}`;
+    const ym = toYm(m1[1], m1[2]);
+    if(ym) return ym;
   }
+
   // 패턴2: "202601", "2026_01" 형태
-  const m2 = fn.match(/(202\d)(0\d|1[012])/);
-  if(m2) return `${m2[1]}.${m2[2]}`;
+  const m2 = fn.match(/((?:19|20)\d{2})[^\d]?(0?[1-9]|1[0-2])(?!\d)/);
+  if(m2){
+    const ym = toYm(m2[1], m2[2]);
+    if(ym) return ym;
+  }
+
+  // 패턴3: "12월 가마감"처럼 월만 있는 파일명은 기준 연도(D.baseMonth 또는 D.period)로 보완
+  const m3 = fn.match(/(^|[^\d])(1[0-2]|0?[1-9])월/);
+  if(m3){
+    const baseYear = Number((D.baseMonth||'').slice(0,4)) || Number((D.period||'').match(/(19|20)\d{2}/)?.[0]) || new Date().getFullYear();
+    const ym = toYm(baseYear, m3[2]);
+    if(ym) return ym;
+  }
+
+  // 패턴4: "260205"처럼 YYMMDD가 붙은 경우(월 우선)
+  const m4 = raw.match(/(^|\D)(\d{2})(0[1-9]|1[0-2])[0-3]\d(?!\d)/);
+  if(m4){
+    const ym = toYm(m4[2], m4[3]);
+    if(ym) return ym;
+  }
+
   return null;
 }
 
