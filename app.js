@@ -6524,24 +6524,170 @@ function genCommissionReport(){
 
 
 
+function genManagementMeetingMode(){
+  const E = buildBriefingEngine();
+  const P = E.P || {};
+  const K = Array.isArray(E.K) ? E.K : [];
+  const S = E.sub || {};
+
+  const rev = nvl(P?.revenue?.total);
+  const op = nvl(P?.op?.total);
+  const opm = ratio(op, rev);
+  const avgKpi = K.length ? K.reduce((a,b)=>a+nvl(b.ts),0)/K.length : null;
+  const bestHq = K.length ? K[0] : null;
+  const lowHq = K.length ? K[K.length-1] : null;
+  const taskTotal = Array.isArray(E.T) ? E.T.length : 0;
+  const taskDone = nvl(E.done);
+  const taskRate = taskTotal ? taskDone/taskTotal : null;
+
+  const issues = [];
+  const worst = E.worstProfit || {name:'-', opm:null};
+  const mgmtYoYN = parseFloat(String(E.mgmtYoY||'').replace('%',''));
+  const subMgmtChgN = parseFloat(E.sub?.mgmtChg);
+
+  if(worst && Number.isFinite(worst.opm)){
+    issues.push({
+      title:`수익성 하위 채널: ${worst.name}`,
+      fact:`영업이익률 ${pctStr(worst.opm)}로 전사 평균 ${pctStr(opm)} 하회`,
+      cause:'판관비·수수료 구조 대비 매출 방어력 약화',
+      action:'하위 채널 비용·수수료 구조 월간 점검 및 즉시 리밸런싱'
+    });
+  }
+
+  if(Number.isFinite(subMgmtChgN)){
+    issues.push({
+      title:'관리수수료 대상 가입자 감소',
+      fact:`연초 대비 ${subMgmtChgN>=0?'+':''}${subMgmtChgN.toFixed(1)}%`,
+      cause:'CAPA 대비 이탈/만기 환수 영향 누적',
+      action:'소매·도매 대상 유지/재가입 캠페인 우선 실행'
+    });
+  }
+
+  if(Number.isFinite(mgmtYoYN)){
+    issues.push({
+      title:'관리수수료 전년 동월 변동',
+      fact:`YoY ${mgmtYoYN>=0?'+':''}${mgmtYoYN.toFixed(1)}%`,
+      cause:'수수료 대상 모수 및 채널 믹스 변동',
+      action:'관리수수료 대상 모수 방어 KPI를 본부 단위로 연동'
+    });
+  }
+
+  if(lowHq && bestHq){
+    const gap = nvl(bestHq.ts)-nvl(lowHq.ts);
+    issues.push({
+      title:'본부 KPI 편차 확대',
+      fact:`${bestHq.hq} ↔ ${lowHq.hq} 격차 ${gap.toFixed(1)}p`,
+      cause:'핵심 지표 실행력·채널 운영 방식 편차',
+      action:'하위 본부 집중 코칭 + 상위 본부 베스트프랙티스 전파'
+    });
+  }
+
+  if(taskTotal){
+    issues.push({
+      title:'과제 실행 속도 관리 필요',
+      fact:`완료율 ${pctStr(taskRate)} (${taskDone}/${taskTotal})`,
+      cause:'진행중 과제의 일정·오너십 관리 미흡',
+      action:'핵심 과제 주간 점검체계와 마감 책임 명확화'
+    });
+  }
+
+  const top3 = issues.slice(0,3);
+  while(top3.length<3){
+    top3.push({
+      title:'데이터 점검 필요',
+      fact:'핵심 이슈 산출에 필요한 데이터 일부 부족',
+      cause:'업로드 데이터 최신성/정합성 미확보',
+      action:'기준월 데이터 업로드 후 재생성'
+    });
+  }
+
+  const briefingLine = [
+    `매출 ${fB(rev)}억 · 영업이익 ${fB(op)}억 · 영업이익률 ${pctStr(opm)}`,
+    `평균 KPI ${avgKpi===null?'데이터 없음':avgKpi.toFixed(1)+'점'}${bestHq?` (상위 ${bestHq.hq} ${nvl(bestHq.ts).toFixed(1)}점)`:''}`,
+    `무선 가입자 ${fmtSubNum(nvl(S.wirelessTot))}명 · CAPA ${fmtSubNum(nvl(S.capa))} · 관리수수료 ${Number.isFinite(E.mgmtCur)?E.mgmtCur.toFixed(1)+'억':'데이터 없음'}`,
+    `과제 완료율 ${pctStr(taskRate)} · 지연위험 ${nvl(E.delayed?.length)}건`
+  ];
+
+  const meetingText = [
+    `경영회의 시작 (${D.period||'-'})`,
+    '',
+    '1. 경영 브리핑',
+    ...briefingLine,
+    '',
+    '2. 핵심 이슈 3개',
+    ...top3.map((i,idx)=>`${idx+1}. ${i.title} - ${i.fact}`),
+    '',
+    '3. 원인 분석',
+    ...top3.map((i,idx)=>`${idx+1}. ${i.title} / 원인: ${i.cause}`),
+    '',
+    '4. 액션 제안',
+    ...top3.map((i,idx)=>`P${idx+1}. ${i.action}`)
+  ].join('\n');
+
+  const h = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>경영회의 시작 모드</title>${rptStyle()}<style>
+    .meet-wrap{max-width:920px;margin:0 auto;padding:20px}
+    .meet-head{background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:14px}
+    .meet-head h1{color:#fff;border:none;margin:0 0 6px;font-size:28px;padding:0}
+    .meet-head p{margin:0;font-size:12px;opacity:.9}
+    .meet-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+    .meet-btn{border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;color:#fff}
+    .meet-btn.copy{background:#0ea5e9}.meet-btn.print{background:#2563eb}.meet-btn.pdf{background:#7c3aed}
+    .meet-sec{background:#fff;border:1px solid #dbe4ee;border-radius:12px;padding:14px 16px;margin-bottom:10px}
+    .meet-sec h2{margin:0 0 8px;padding:0;border:none;font-size:16px;color:#0f172a}
+    .meet-sec ul,.meet-sec ol{margin:0;padding-left:18px}
+    .meet-sec li{margin:4px 0;line-height:1.55}
+    .meet-kv{font-size:12px;color:#334155}
+    @media print {.meet-tools{display:none} body{background:#fff;padding:0} .meet-wrap{padding:0}}
+  </style></head><body><div class="meet-wrap">
+    <div class="meet-head">
+      <h1>경영회의 시작</h1>
+      <p>${D.period||'-'} 기준 · 손익·KPI·가입자·수수료·과제 통합 요약</p>
+    </div>
+
+    <div class="meet-tools">
+      <button class="meet-btn copy" onclick="copyMeetingText()">📋 복사</button>
+      <button class="meet-btn print" onclick="window.print()">🖨️ 인쇄</button>
+      <button class="meet-btn pdf" onclick="window.print()">📄 PDF 내보내기</button>
+    </div>
+
+    <section class="meet-sec">
+      <h2>1. 경영 브리핑</h2>
+      <ul>${briefingLine.map(x=>`<li>${x}</li>`).join('')}</ul>
+    </section>
+
+    <section class="meet-sec">
+      <h2>2. 핵심 이슈 3개</h2>
+      <ol>${top3.map(i=>`<li><strong>${i.title}</strong> — ${i.fact}</li>`).join('')}</ol>
+    </section>
+
+    <section class="meet-sec">
+      <h2>3. 원인 분석</h2>
+      <ol>${top3.map(i=>`<li><strong>${i.title}</strong><div class="meet-kv">원인: ${i.cause}</div></li>`).join('')}</ol>
+    </section>
+
+    <section class="meet-sec">
+      <h2>4. 액션 제안</h2>
+      <ol>${top3.map((i,idx)=>`<li><strong>P${idx+1}.</strong> ${i.action}</li>`).join('')}</ol>
+    </section>
+  </div>
+  <script>
+    function copyMeetingText(){
+      var text = ${JSON.stringify(meetingText)};
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){alert('회의안이 복사되었습니다.');});
+      }else{
+        var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('회의안이 복사되었습니다.');
+      }
+    }
+  <\/script>
+  </body></html>`;
+
+  openReport(h,'경영회의 시작 모드');
+}
+
 function genMeetingReadyBriefing(){
-  const E=buildBriefingEngine();
-  const risks=(E.actions||[]).filter(a=>a.priority==='HIGH').slice(0,3);
-  const quick=(E.insights||[]).slice(0,4);
-  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>회의용 브리핑</title>${rptStyle()}</head><body><div class="wrap">
-  <h1>회의용 경영 브리핑 (${D.period||'-'})</h1>
-  <h2>1) Management Summary</h2>
-  <ul>${quick.map(x=>`<li>${x}</li>`).join('')}</ul>
-  <h2>2) Issue Detection</h2>
-  <ul>${risks.map(x=>`<li><strong>${x.item}</strong> · ${x.detail}</li>`).join('')||'<li>핵심 이슈 없음</li>'}</ul>
-  <h2>3) Action Recommendations</h2>
-  <table><thead><tr><th>우선순위</th><th>과제</th><th>담당</th><th>기한</th></tr></thead><tbody>
-  ${(E.actions||[]).slice(0,8).map(a=>`<tr><td>${a.priority}</td><td>${a.item}</td><td>${a.owner}</td><td>${a.due}</td></tr>`).join('')}
-  </tbody></table>
-  <h2>4) Meeting Script</h2>
-  <div class="warn">금월 핵심은 수익성 하위 채널 구조개선, KPI 편차 축소, 관리수수료 기반 방어입니다. 본부별 실행안을 이번 주 내 확정하고, 다음 회의에서 KPI·손익 개선지표를 재점검하겠습니다.</div>
-  </div></body></html>`;
-  openReport(h,'회의용 브리핑');
+  // 하위호환: 기존 버튼/호출 유지
+  genManagementMeetingMode();
 }
 
 function genExecutiveManagementReport(){
