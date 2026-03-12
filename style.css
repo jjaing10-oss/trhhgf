@@ -161,6 +161,22 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
 .ai-sb:disabled { opacity:.5; }
 .ai-conn-btn { padding:9px 16px; background:linear-gradient(135deg,#059669,#34d399); color:#fff; border:none; border-radius:var(--rad2); font-family:var(--f); font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0; min-height:40px; }
 .ai-conn-btn.connected { background:linear-gradient(135deg,#0284c7,#38bdf8); }
+
+
+/* AI 브리핑 탭 스크롤 고정 보정 (하단 네비/중첩 스크롤 충돌 대응) */
+#t-ai{
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 140px) !important;
+}
+#t-ai #aiChatWrap{
+  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px);
+}
+#t-ai .ai-msgs{
+  flex:none;
+  max-height:min(34vh, 260px);
+}
 .up-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rad); padding:16px; margin-bottom:14px; }
 .up-card h3 { font-size:13px; font-weight:700; margin-bottom:4px; }
 .up-card .desc { font-size:11px; color:var(--t3); margin-bottom:12px; }
@@ -1030,26 +1046,3 @@ select.fs { padding:8px 10px; background:var(--bg2); border:1px solid var(--bord
 }
 
 .tab-month-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);color:#7dd3fc;font-size:11px;font-weight:800;letter-spacing:.1px}
-
-/* AI 브리핑 탭 스크롤 보강 (모바일 하단 네비 가림/중첩 스크롤 이슈 완화) */
-#t-ai{
-  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 84px) !important;
-}
-#t-ai .ai-msgs{
-  max-height:min(42vh, 360px);
-}
-
-/* AI 브리핑 탭 추가 스크롤 보정 (끝까지 미도달 이슈 대응) */
-#t-ai{
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior-y:contain;
-  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 140px) !important;
-}
-#t-ai #aiChatWrap{
-  padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 28px);
-}
-#t-ai .ai-msgs{
-  flex:none;
-  max-height:min(34vh, 260px);
-}
