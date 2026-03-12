@@ -206,6 +206,7 @@
 
 <!-- TASKS -->
 <div class="pnl" id="t-tasks">
+  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthTasks">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genTaskReport()">📄 전사 과제 종합</button>
     <button class="rpt-bar-btn blue" onclick="genTaskHqReport()">🏢 총괄별 심층분석</button>
@@ -227,13 +228,14 @@
 
 <!-- PROFIT -->
 <div class="pnl" id="t-profit">
+  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthProfit">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genProfitExecutive()">⭐ Executive 종합</button>
     <button class="rpt-bar-btn teal" onclick="genChannelCostReport()">💰 채널×비용 심층분석</button>
     <button class="rpt-bar-btn blue" onclick="genProfitReport('hq')">🏢 본부별 수익성</button>
     <button class="rpt-bar-btn purple" onclick="genProfitReport('channel')">📊 채널별 손익</button>
   </div>
-  <div class="sh"><div><div class="sht">BM별 이익계산서</div><div class="shs">'26년 1월 기준 · 단위: 백만원 · 공헌이익=영업이익 / 영업이익=점프업·도소매 조정 후</div></div></div>
+  <div class="sh"><div><div class="sht">BM별 이익계산서</div><div class="shs">업로드 기준 · 단위: 백만원 · 공헌이익=영업이익 / 영업이익=점프업·도소매 조정 후</div></div></div>
   <div class="sg sg2" id="profStats"></div>
   <div class="sec-hdr" onclick="toggleSec(this)"><span class="st">📊 채널별 매출/공헌이익·영업이익</span><span class="sa">▼</span></div>
   <div class="sec-body">
@@ -311,6 +313,7 @@
 
 <!-- KPI -->
 <div class="pnl" id="t-kpi">
+  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthKpi">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genKpiVarianceReport()">📈 편차 원인분석</button>
     <button class="rpt-bar-btn teal" onclick="genKpiActionPlanReport()">🏢 본부별 액션플랜</button>
@@ -428,7 +431,7 @@
 
 <!-- SUBSCRIBERS -->
 <div class="pnl" id="t-subscriber">
-  <div class="sh"><div><div class="sht">가입자 분석</div><div class="shs">기본 데이터 고정 표시 + Factbook 업로드 시 최신값 반영</div></div></div>
+  <div class="sh"><div><div class="sht">가입자 분석</div><div class="shs">기본 데이터 고정 표시 + Factbook 업로드 시 최신값 반영</div></div><span class="tab-month-badge" id="tabMonthSubscriber">기준월 -</span></div>
   <div class="sub-actions">
     <button class="sub-btn primary" onclick="document.getElementById('fFactbook').click()">📁 Factbook 업로드</button>
     <button class="sub-btn" onclick="openSubscriberReport()">📄 보고서 출력</button>
@@ -499,6 +502,7 @@
 
 <!-- ===== 수수료 분석 패널 ===== -->
 <div class="pnl" id="t-commission">
+  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthCommission">기준월 -</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
     <button class="rpt-bar-btn" style="background:#059669;color:#fff;" id="csBtn4" onclick="switchComm(4)">📋 1월 실적</button>
     <button class="rpt-bar-btn teal" style="opacity:.7" id="csBtn0" onclick="switchComm(0)">📈 연도별 추이</button>
