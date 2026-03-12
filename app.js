@@ -3390,6 +3390,39 @@ function genAISummaryReport(){
 }
 
 function quickAI(q){document.getElementById('aiIn').value=q;sendAI();}
+function genThreeYearBusinessPlanAI(){
+  const P=D.profit||{},S=D.subscriber||{},C=D.commission||{};
+  const rev=P.revenue?.total||0,op=P.op?.total||0,sga=P.sga?.total||0;
+  const wirelessNow=S?.current?.wireless_total||S?.wireless?.total?.slice?.(-1)?.[0]||0;
+  const capaNow=S?.current?.wireless_capa||S?.wireless?.capa?.slice?.(-1)?.[0]||0;
+  const mgmtFeeNow=C?.summary?.management_fee||0;
+  const opm=rev?((op/rev)*100):0;
+  const prompt=`[원클릭 사업계획 자동생성]\n\n`
+  +`목표: 향후 3개년(Year+1~Year+3) 사업계획을 작성해줘. `
+  +`반드시 타사 공개사례(국내외 통신/유통/플랫폼 중 유사 BM) 3~5개를 찾아 벤치마크하고 출처(URL/문서명)를 명시해줘.\n\n`
+  +`현재 내부 기준 데이터(대시보드):\n`
+  +`- 전사 매출: ${fB(rev)}억\n`
+  +`- 전사 영업이익: ${fB(op)}억 (OPM ${opm.toFixed(1)}%)\n`
+  +`- 판관비: ${fB(sga)}억\n`
+  +`- 무선 가입자: ${Math.round(wirelessNow).toLocaleString('ko-KR')}\n`
+  +`- CAPA(신규+기변): ${Math.round(capaNow).toLocaleString('ko-KR')}\n`
+  +`- 관리수수료: ${fB(mgmtFeeNow)}억\n\n`
+  +`출력 형식(반드시 표 포함):\n`
+  +`1) Executive Summary (한 페이지)\n`
+  +`2) 핵심 가정(시장성장률, CAPA, 수수료율, ARPU/객단가, 비용상승률)\n`
+  +`3) 3개년 재무계획 표: 매출, 매출원가, 매출총이익, 판관비(인건비/판촉비/수수료/기타), 영업이익, 당기순이익\n`
+  +`4) 3개년 운영계획 표: 가입자, CAPA, 관리수수료, 서비스매출, 채널믹스\n`
+  +`5) 시나리오 3종(보수/기준/공격) + 민감도(수수료율 ±1%p, CAPA ±10%)\n`
+  +`6) 타사 벤치마크 인사이트(무엇을 채택/배제할지)\n`
+  +`7) 실행 로드맵(월별/분기별), KPI, 담당조직\n`
+  +`8) 리스크/대응(재무·조직·시장·규제)\n\n`
+  +`작성 원칙:\n`
+  +`- 숫자는 가능한 범위에서 계산 근거를 함께 제시\n`
+  +`- 모르는 값은 합리적 가정을 먼저 선언 후 계산\n`
+  +`- 외부 사례는 사실과 추정치를 구분\n`
+  +`- 마지막에 '경영진 의사결정 체크리스트 10개'를 제시.`;
+  quickAI(prompt);
+}
 async function sendAI(){
   const inp=document.getElementById('aiIn'),msg=inp.value.trim();if(!msg)return;
   const key=document.getElementById('apiKey').value.trim();
