@@ -206,7 +206,7 @@
 
 <!-- TASKS -->
 <div class="pnl" id="t-tasks">
-  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthTasks">기준월 -</span></div>
+  <div class="sh"><div><div class="sht">리스크/과제 분석</div><div class="shs">전사 과제 현황 및 리스크 모니터링</div></div><span class="tab-month-badge" id="tabMonthTasks">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genTaskReport()">📄 전사 과제 종합</button>
     <button class="rpt-bar-btn blue" onclick="genTaskHqReport()">🏢 총괄별 심층분석</button>
@@ -228,7 +228,7 @@
 
 <!-- PROFIT -->
 <div class="pnl" id="t-profit">
-  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthProfit">기준월 -</span></div>
+  <div class="sh"><div><div class="sht">손익 분석</div><div class="shs">채널/본부별 손익 및 비용 구조 분석</div></div><span class="tab-month-badge" id="tabMonthProfit">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genProfitExecutive()">⭐ Executive 종합</button>
     <button class="rpt-bar-btn teal" onclick="genChannelCostReport()">💰 채널×비용 심층분석</button>
@@ -313,7 +313,7 @@
 
 <!-- KPI -->
 <div class="pnl" id="t-kpi">
-  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthKpi">기준월 -</span></div>
+  <div class="sh"><div><div class="sht">조직 KPI 분석</div><div class="shs">본부별 KPI 달성도 및 편차 분석</div></div><span class="tab-month-badge" id="tabMonthKpi">기준월 -</span></div>
   <div class="rpt-bar">
     <button class="rpt-bar-btn green" onclick="genKpiVarianceReport()">📈 편차 원인분석</button>
     <button class="rpt-bar-btn teal" onclick="genKpiActionPlanReport()">🏢 본부별 액션플랜</button>
@@ -502,7 +502,7 @@
 
 <!-- ===== 수수료 분석 패널 ===== -->
 <div class="pnl" id="t-commission">
-  <div class="tab-month-row"><span class="tab-month-badge" id="tabMonthCommission">기준월 -</span></div>
+  <div class="sh"><div><div class="sht">수수료 분석</div><div class="shs">관리수수료/수수료수입 구조 및 리스크 분석</div></div><span class="tab-month-badge" id="tabMonthCommission">기준월 -</span></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
     <button class="rpt-bar-btn" style="background:#059669;color:#fff;" id="csBtn4" onclick="switchComm(4)">📋 1월 실적</button>
     <button class="rpt-bar-btn teal" style="opacity:.7" id="csBtn0" onclick="switchComm(0)">📈 연도별 추이</button>

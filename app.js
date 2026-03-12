@@ -4866,7 +4866,8 @@ function saveUploadedState(){
       kpi_retail_detail:D.kpi_retail_detail,
       kpi_wholesale_detail:D.kpi_wholesale_detail,
       variance:D.variance,
-      sga_detail:D.sga_detail
+      sga_detail:D.sga_detail,
+      commission:D.commission
     };
     localStorage.setItem(UPLOADED_STATE_STORAGE_KEY, JSON.stringify(payload));
   }catch(e){ console.warn('saveUploadedState failed', e); }
@@ -4886,6 +4887,7 @@ function loadUploadedState(){
     if(data.kpi_wholesale_detail && typeof data.kpi_wholesale_detail==='object') D.kpi_wholesale_detail = data.kpi_wholesale_detail;
     if(data.variance && typeof data.variance==='object') D.variance = data.variance;
     if(data.sga_detail && typeof data.sga_detail==='object') D.sga_detail = data.sga_detail;
+    if(data.commission && typeof data.commission==='object') D.commission = data.commission;
   }catch(e){ console.warn('loadUploadedState failed', e); }
 }
 function updateTabMonthBadges(){
@@ -4981,15 +4983,102 @@ function parseExcel(file,type){
   reader.readAsArrayBuffer(file);
 }
 
+function extractCommissionDataFromWorkbook(wb){
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if(!ws) throw new Error('수수료 시트를 찾을 수 없습니다.');
+  const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  const parsed = cloneObj(D.commission||{});
+  if(!parsed.jan26 || typeof parsed.jan26!=='object') parsed.jan26 = {};
+
+  const norm=v=>String(v||'').replace(/\s+/g,'').trim();
+  const toNum=v=>{
+    if(v===null || v===undefined || v==='') return null;
+    const n = Number(String(v).replace(/,/g,''));
+    return Number.isFinite(n) ? n : null;
+  };
+  const findRow=(keyword)=>rows.find(r=>r.some(c=>norm(c).includes(keyword)));
+
+  const setIfNumber=(obj,key,val)=>{ if(val!==null) obj[key]=val; };
+
+  const mgmtRow = findRow('관리수수료') || findRow('관리수수료합계');
+  const policyRow = findRow('정책수수료') || findRow('수수료수입정책');
+  const totalRow = findRow('전사합계') || findRow('합계');
+
+  if(mgmtRow){
+    if(!parsed.jan26.mgmt_fee) parsed.jan26.mgmt_fee={};
+    const mg = parsed.jan26.mgmt_fee;
+    setIfNumber(mg,'retail',toNum(mgmtRow[2]));
+    setIfNumber(mg,'wholesale',toNum(mgmtRow[3]));
+    setIfNumber(mg,'digital',toNum(mgmtRow[4]));
+    setIfNumber(mg,'b2b',toNum(mgmtRow[5]));
+    setIfNumber(mg,'small_biz',toNum(mgmtRow[6]));
+    setIfNumber(mg,'common',toNum(mgmtRow[7]));
+    const sum = ['retail','wholesale','digital','b2b','small_biz','common'].reduce((a,k)=>a+(Number(mg[k])||0),0);
+    if(sum>0) mg.total = Number(sum.toFixed(1));
+  }
+
+  if(policyRow){
+    if(!parsed.jan26.policy_fee) parsed.jan26.policy_fee={};
+    const pf = parsed.jan26.policy_fee;
+    setIfNumber(pf,'retail',toNum(policyRow[2]));
+    setIfNumber(pf,'wholesale',toNum(policyRow[3]));
+    setIfNumber(pf,'digital',toNum(policyRow[4]));
+    setIfNumber(pf,'enterprise',toNum(policyRow[5]));
+    setIfNumber(pf,'corporate_sales',toNum(policyRow[6]));
+    setIfNumber(pf,'rds',toNum(policyRow[7]));
+    setIfNumber(pf,'policy',toNum(policyRow[8]));
+    const sum = ['retail','wholesale','digital','enterprise','corporate_sales','rds','policy'].reduce((a,k)=>a+(Number(pf[k])||0),0);
+    if(sum>0) pf.total = Number(sum.toFixed(1));
+  }
+
+  if(totalRow){
+    if(!parsed.jan26.total) parsed.jan26.total={};
+    const tt = parsed.jan26.total;
+    setIfNumber(tt,'retail',toNum(totalRow[2]));
+    setIfNumber(tt,'wholesale',toNum(totalRow[3]));
+    setIfNumber(tt,'digital',toNum(totalRow[4]));
+    setIfNumber(tt,'b2b',toNum(totalRow[5]));
+    setIfNumber(tt,'small_biz',toNum(totalRow[6]));
+    setIfNumber(tt,'common_corp',toNum(totalRow[7]));
+    setIfNumber(tt,'common_ch',toNum(totalRow[8]));
+    const sum = ['retail','wholesale','digital','b2b','small_biz','common_corp','common_ch'].reduce((a,k)=>a+(Number(tt[k])||0),0);
+    if(sum>0) tt.total = Number(sum.toFixed(1));
+  }
+
+  if(parsed.jan26 && parsed.jan26.total && parsed.jan26.total.total){
+    const y26 = (parsed.yearly||[]).find(y=>y.yr==='26년(E)');
+    if(y26){
+      y26.total = Number((parsed.jan26.total.total*12).toFixed(1));
+      ['retail','wholesale','digital','b2b','small_biz'].forEach(k=>{
+        y26[k] = Number(((parsed.jan26.total[k]||0)*12).toFixed(1));
+      });
+    }
+  }
+
+  return parsed;
+}
+
 // ── 수수료 파일: 파일명 기준월만 감지 ──
 function parseCommExcel(wb, filename){
   const month = extractMonthFromFilename(filename);
-  if(month){ setGlobalBaseMonth(month, '수수료'); setReportPeriod(month); setTabMonth('commission', month); }
-  // 실제 수수료 데이터 파싱은 D.commission 하드코딩 유지
+  if(month){
+    setGlobalBaseMonth(month, '수수료');
+    setReportPeriod(month);
+    setTabMonth('commission', month);
+  }
+
+  // 업로드한 원본을 로컬에 보존해 새로고침 후에도 최신 수치가 유지되도록 동기화
+  try{
+    const parsed = extractCommissionDataFromWorkbook(wb);
+    if(parsed && typeof parsed==='object') D.commission = parsed;
+  }catch(err){
+    console.warn('commission parse fallback:', err && err.message ? err.message : err);
+  }
+
   initCommission();
   saveUploadedState();
   updateTabMonthBadges();
-  showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 기준월 → ${month}` : '⚠️ 파일명에서 월 감지 실패 · 기존 데이터 유지');
+  showUpStatus('comm', month?'ok':'warn', month ? `✅ 수수료 데이터 업데이트 · 기준월 ${month}` : '✅ 수수료 데이터 업데이트 (기준월 감지 실패)');
 }
 function parseTaskExcel(wb, filename){
   const month = extractMonthFromFilename(filename);
