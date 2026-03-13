@@ -5464,6 +5464,55 @@ function extractMonthFromFilename(filename){
   return null;
 }
 
+// ── 워크북 내부에서 연/월 추정 (파일명 실패 시 보조) ──
+function extractMonthFromWorkbook(wb){
+  if(!wb || !Array.isArray(wb.SheetNames) || !wb.SheetNames.length) return null;
+  const toYm = (yy, mm)=>{
+    const m = Number(mm);
+    if(!(m>=1 && m<=12)) return null;
+    const y = Number(yy);
+    const yyyy = y < 100 ? (y < 50 ? 2000+y : 1900+y) : y;
+    if(yyyy < 2000 || yyyy > 2099) return null;
+    return `${yyyy}.${String(m).padStart(2,'0')}`;
+  };
+  const candidates = [];
+  const collect = (text)=>{
+    const s = String(text||'');
+    if(!s) return;
+    let m;
+    const re1 = /((?:19|20)?\d{2})년[^\d]{0,10}(\d{1,2})월/g;
+    while((m=re1.exec(s))!==null){
+      const ym = toYm(m[1], m[2]);
+      if(ym) candidates.push(ym);
+    }
+    const re2 = /((?:19|20)\d{2})[^\d]?(0?[1-9]|1[0-2])(?!\d)/g;
+    while((m=re2.exec(s))!==null){
+      const ym = toYm(m[1], m[2]);
+      if(ym) candidates.push(ym);
+    }
+    const re3 = /(^|[^\d])([2-3]\d)(0[1-9]|1[0-2])(?!\d)/g; // 2401, 2601
+    while((m=re3.exec(s))!==null){
+      const ym = toYm(m[2], m[3]);
+      if(ym) candidates.push(ym);
+    }
+  };
+
+  wb.SheetNames.forEach(collect);
+  const maxSheets = Math.min(3, wb.SheetNames.length);
+  for(let i=0;i<maxSheets;i++){
+    const ws = wb.Sheets[wb.SheetNames[i]];
+    if(!ws || !ws['!ref']) continue;
+    const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:'',range:0});
+    for(let r=0;r<Math.min(40, rows.length);r++){
+      const row = rows[r] || [];
+      for(let c=0;c<Math.min(20, row.length);c++) collect(row[c]);
+    }
+  }
+
+  if(!candidates.length) return null;
+  return candidates.sort((a,b)=>monthToNumber(b)-monthToNumber(a))[0] || null;
+}
+
 // ── 헤더 배지 + D.baseMonth 업데이트 ──
 function setGlobalBaseMonth(month, sourceLabel){
   if(!month) return;
@@ -5747,7 +5796,7 @@ function extractCommissionDataFromWorkbook(wb){
 
 // ── 수수료 파일: 파일명 기준월만 감지 ──
 function parseCommExcel(wb, filename){
-  const month = extractMonthFromFilename(filename);
+  const month = extractMonthFromFilename(filename) || extractMonthFromWorkbook(wb) || D.baseMonth || getSavedBaseMonth() || null;
   if(month){
     setGlobalBaseMonth(month, '수수료');
     setReportPeriod(month);
@@ -5955,9 +6004,16 @@ function renderTrendChart(){
   tb.innerHTML=trs.join('');
 }
 function parseKpiExcel(wb, filename){try{
-  const month = extractMonthFromFilename(filename);
+  const month = extractMonthFromFilename(filename) || extractMonthFromWorkbook(wb);
   if(month){ setGlobalBaseMonth(month, 'KPI'); setReportPeriod(month); }
-  const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];for(let i=11;i<=16;i++){const r=rows[i];if(!r||!r[1])continue;kpi.push({hq:r[1],ts:r[2]||0,rk:r[3]||0,rt:{t:r[4]||0,s:r[5]||0,p:r[6]||0},wh:{t:r[7]||0,s:r[8]||0,p:r[9]||0},sm:{t:r[10]||0,s:r[11]||0,p:r[12]||0}});}
+  const ws=wb.Sheets['1Q 종합']||wb.Sheets[wb.SheetNames.find(s=>String(s).includes('종합'))];if(!ws){showUpStatus('kpi','err','❌ 종합 시트 없음');return;}const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:0});const kpi=[];
+  const hqSet = new Set(['강북본부','강남본부','강서본부','동부본부','서부본부']);
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const hq = String(r?.[1]||'').trim();
+    if(!hqSet.has(hq)) continue;
+    kpi.push({hq,ts:Number(r[2])||0,rk:Number(r[3])||0,rt:{t:Number(r[4])||0,s:Number(r[5])||0,p:Number(r[6])||0},wh:{t:Number(r[7])||0,s:Number(r[8])||0,p:Number(r[9])||0},sm:{t:Number(r[10])||0,s:Number(r[11])||0,p:Number(r[12])||0}});
+  }
   if(kpi.length>=3){kpi.sort((a,b)=>b.ts-a.ts);kpi.forEach((r,i)=>r.rk=i+1);D.kpi=kpi;if(month) setTabMonth('kpi', month);else clearTabMonth('kpi');saveUploadedState();initKpiUI();initDashboard();updateTabMonthBadges();showUpStatus('kpi','ok','✅ KPI 업데이트!'+(month?` · 기준월 ${month}`:''));}
   else showUpStatus('kpi','err','❌ KPI 데이터 부족');
 }catch(err){showUpStatus('kpi','err','❌ '+err.message);}}
