@@ -5246,6 +5246,9 @@ function syncAllTabMonths(month){
     localStorage.setItem(TAB_MONTH_STORAGE_KEY, JSON.stringify(obj));
   }catch(e){}
   D.taskMonth = month;
+  if(typeof subscriberData!=='undefined' && subscriberData && typeof subscriberData==='object'){
+    subscriberData.baseMonth = month;
+  }
   updateTabMonthBadges();
 }
 function saveUploadedState(){
@@ -5296,7 +5299,7 @@ function updateTabMonthBadges(){
     ['tabMonthTasks', m.tasks || D.taskMonth || fallbackMonth],
     ['tabMonthProfit', m.profit || fallbackMonth],
     ['tabMonthKpi', m.kpi || fallbackMonth],
-    ['tabMonthSubscriber', m.subscriber || ((typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : fallbackMonth)],
+    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || fallbackMonth)],
     ['tabMonthCommission', m.commission || fallbackMonth],
     ['tabMonthSim', m.simulate || m.plan || m.profit || fallbackMonth]
   ];
