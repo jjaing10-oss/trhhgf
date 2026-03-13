@@ -5192,7 +5192,11 @@ function parseFactbookExcel(wb){
     const extracted = extractSubscriberDataFromWorkbook(wb);
     subscriberData = extracted;
     saveSubscriberData();
-    if(extracted.baseMonth) setTabMonth('subscriber', extracted.baseMonth);
+    if(extracted.baseMonth){
+      setGlobalBaseMonth(extracted.baseMonth, 'Factbook');
+      setReportPeriod(extracted.baseMonth);
+      setTabMonth('subscriber', extracted.baseMonth);
+    }
     initSubscriberUI();
     initDashboard();
     updateTabMonthBadges();
@@ -5232,6 +5236,19 @@ function clearTabMonth(type){
     delete obj[type];
     localStorage.setItem(TAB_MONTH_STORAGE_KEY, JSON.stringify(obj));
   }catch(e){}
+  updateTabMonthBadges();
+}
+function syncAllTabMonths(month){
+  if(!month) return;
+  try{
+    const obj = getSavedTabMonths();
+    ['tasks','profit','kpi','subscriber','commission','plan','simulate'].forEach((k)=>{ obj[k]=month; });
+    localStorage.setItem(TAB_MONTH_STORAGE_KEY, JSON.stringify(obj));
+  }catch(e){}
+  D.taskMonth = month;
+  if(typeof subscriberData!=='undefined' && subscriberData && typeof subscriberData==='object'){
+    subscriberData.baseMonth = month;
+  }
   updateTabMonthBadges();
 }
 function saveUploadedState(){
@@ -5356,12 +5373,8 @@ function extractMonthFromFilename(filename){
     if(ym) return ym;
   }
 
-  // 패턴4: "260205"처럼 YYMMDD가 붙은 경우(월 우선)
-  const m4 = raw.match(/(^|\D)(\d{2})(0[1-9]|1[0-2])[0-3]\d(?!\d)/);
-  if(m4){
-    const ym = toYm(m4[2], m4[3]);
-    if(ym) return ym;
-  }
+  // 주의: YYMMDD(예: 260205)는 파일 생성일/배포일인 경우가 많아 기준월로 오인될 수 있음.
+  // 따라서 날짜 6자리는 기준월 추출 대상으로 사용하지 않는다.
 
   return null;
 }
@@ -5371,6 +5384,7 @@ function setGlobalBaseMonth(month, sourceLabel){
   if(!month) return;
   applyBaseMonthToUi(month, sourceLabel);
   saveBaseMonth(month);
+  syncAllTabMonths(month);
   console.log('기준월 변경:', month, sourceLabel||'');
 }
 function setReportPeriod(month){
@@ -5780,6 +5794,7 @@ function parseProfitExcel(wb, filename){try{
 function parseProfitYtdExcel(wb, filename){try{
   const month = extractMonthFromFilename(filename);
   if(month){ setGlobalBaseMonth(month, 'BM누적'); setReportPeriod(month); setTabMonth('profit', month); }
+  else clearTabMonth('profit');
   var MONTHS=['1\uc6d4','2\uc6d4','3\uc6d4','4\uc6d4','5\uc6d4','6\uc6d4','7\uc6d4','8\uc6d4','9\uc6d4','10\uc6d4','11\uc6d4','12\uc6d4'];
   var CH_HDR={'\uc18c\ub9e4':'retail','\ub3c4\ub9e4':'wholesale','\ub514\uc9c0\ud138':'digital','\ub514\uc9c0\ud138(KT\uc0f5)':'digital','\uae30\uc5c5/\uacf5\uacf5':'enterprise','IoT':'iot','\ubc95\uc778\uc601\uc5c5':'corporate_sales','\uc18c\uc0c1\uacf5\uc778':'small_biz'};
   var norm=function(x){return String(x||'').trim().replace(/\s+/g,'').replace(/\n/g,'');};
@@ -5911,6 +5926,7 @@ function parseHqProfitExcel(wb, filename){
     });
     D.hq = newHq;
     if(month){ setGlobalBaseMonth(month, '본부손익'); setReportPeriod(month); setTabMonth('profit', month); }
+    else clearTabMonth('profit');
     saveUploadedState();
     initProfitUI();
     updateTabMonthBadges();
