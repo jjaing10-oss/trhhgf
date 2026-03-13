@@ -189,6 +189,7 @@ function runScenarioSimulation(baseline, inputs){
 
     return {
       month:m.month || `${idx+1}월`,
+      monthIndex:parseMonthIndex(m.monthIndex ?? m.month ?? (idx+1)) || (idx+1),
       actualRev:actual.revenue,
       planRev,
       scenarioRev,
@@ -268,10 +269,80 @@ function generateExecutiveInsights(simData){
   ];
 }
 
+function parseMonthIndex(v){
+  if(v===null||v===undefined) return null;
+  if(Number.isFinite(v)){
+    const n = Number(v);
+    return n>=1&&n<=12 ? n : null;
+  }
+  const s = String(v).trim();
+  const m = s.match(/(\d{1,2})\s*월?/);
+  if(!m) return null;
+  const n = Number(m[1]);
+  return n>=1&&n<=12 ? n : null;
+}
+
+function safeRate(actual, plan){
+  const p = Number(plan);
+  if(!Number.isFinite(p) || p===0) return null;
+  const a = Number(actual);
+  if(!Number.isFinite(a)) return null;
+  return a / p;
+}
+
+function buildMonthlyPlanVsActual(){
+  const planRows = Array.isArray(D?.planData?.monthly) ? D.planData.monthly : [];
+  const actualRows = Array.isArray(D?.profit?.monthly_trend) ? D.profit.monthly_trend : [];
+  const planMap = new Map();
+  const actualMap = new Map();
+
+  planRows.forEach(r=>{
+    const idx = parseMonthIndex(r?.monthIndex ?? r?.month);
+    if(!idx) return;
+    planMap.set(idx, { op:Number(r?.op), revenue:Number(r?.revenue) });
+  });
+  actualRows.forEach(r=>{
+    const idx = parseMonthIndex(r?.monthIndex ?? r?.month ?? r?.m);
+    if(!idx) return;
+    actualMap.set(idx, {
+      op:Number(r?.op ?? r?.total),
+      revenue:Number(r?.revenue)
+    });
+  });
+
+  const out=[];
+  for(let i=1;i<=12;i++){
+    const p = planMap.get(i) || {};
+    const a = actualMap.get(i) || {};
+    const planOp = Number.isFinite(p.op) ? p.op : null;
+    const planRevenue = Number.isFinite(p.revenue) ? p.revenue : null;
+    const actualOp = Number.isFinite(a.op) ? a.op : null;
+    const actualRevenue = Number.isFinite(a.revenue) ? a.revenue : null;
+    out.push({
+      month:`${i}월`,
+      monthIndex:i,
+      plan:{op:planOp,revenue:planRevenue},
+      actual:{op:actualOp,revenue:actualRevenue},
+      gap:{
+        op:(planOp===null||actualOp===null)?null:actualOp-planOp,
+        revenue:(planRevenue===null||actualRevenue===null)?null:actualRevenue-planRevenue
+      },
+      achv:{
+        op:safeRate(actualOp, planOp),
+        revenue:safeRate(actualRevenue, planRevenue)
+      }
+    });
+  }
+  return out;
+}
+
 function renderWhatIfSummary(simData){
   const wrap = document.getElementById('simSummary');
   if(!wrap) return;
   const {actual,plan,scenario} = simData.summary;
+  const monthlyComp = buildMonthlyPlanVsActual();
+  const opAchvRows = monthlyComp.filter(r=>r.achv.op!==null);
+  const avgOpAchv = opAchvRows.length ? (opAchvRows.reduce((s,r)=>s+r.achv.op,0)/opAchvRows.length) : null;
   const gapRev = scenario.revenue-plan.revenue;
   const gapOp = scenario.op-plan.op;
   const gapNet = scenario.netAdd-plan.netAdd;
@@ -279,20 +350,34 @@ function renderWhatIfSummary(simData){
     <div class="sim-card"><div class="k">Actual (연환산)</div><div class="v">${fB(actual.revenue)}억</div><div class="d">영업이익 ${fB(actual.op)}억 · 마진 ${(actual.margin*100).toFixed(1)}%</div></div>
     <div class="sim-card"><div class="k">Plan 2026</div><div class="v">${fB(plan.revenue)}억</div><div class="d">영업이익 ${fB(plan.op)}억 · 순증 ${comma(plan.netAdd)}</div></div>
     <div class="sim-card"><div class="k">Scenario</div><div class="v">${fB(scenario.revenue)}억</div><div class="d">영업이익 ${fB(scenario.op)}억 · 마진 ${(scenario.margin*100).toFixed(1)}%</div></div>
-    <div class="sim-card"><div class="k">Gap (Scenario-Plan)</div><div class="v" style="color:${gapOp>=0?'#86efac':'#fca5a5'}">${gapOp>=0?'+':''}${fB(gapOp)}억</div><div class="d" style="color:${gapRev>=0?'#86efac':'#fca5a5'}">매출 ${gapRev>=0?'+':''}${fB(gapRev)}억 · 순증 ${gapNet>=0?'+':''}${comma(gapNet)}</div></div>`;
+    <div class="sim-card"><div class="k">Gap (Scenario-Plan)</div><div class="v" style="color:${gapOp>=0?'#86efac':'#fca5a5'}">${gapOp>=0?'+':''}${fB(gapOp)}억</div><div class="d" style="color:${gapRev>=0?'#86efac':'#fca5a5'}">매출 ${gapRev>=0?'+':''}${fB(gapRev)}억 · 순증 ${gapNet>=0?'+':''}${comma(gapNet)}</div><div class="d" style="margin-top:4px;color:#cbd5e1">월평균 계획 대비 OP 달성률: ${avgOpAchv===null?'-':(avgOpAchv*100).toFixed(1)+'%'}</div></div>`;
 }
 
 function renderWhatIfCharts(simData){
   const monthlyEl = document.getElementById('simMonthlyChart');
   if(monthlyEl){
-    const mx = Math.max(...simData.monthly.map(m=>Math.max(m.actualRev,m.planRev,m.scenarioRev)),1);
-    monthlyEl.innerHTML = simData.monthly.map(m=>`
+    const monthlyComp = buildMonthlyPlanVsActual();
+    const compMap = new Map(monthlyComp.map(r=>[r.monthIndex,r]));
+    const mx = Math.max(...simData.monthly.map((m,idx)=>{
+      const monthIndex = parseMonthIndex(m.monthIndex ?? m.month ?? (idx+1));
+      const comp = compMap.get(monthIndex)||{};
+      const actualRev = Number(comp?.actual?.revenue);
+      return Math.max(Number.isFinite(actualRev)?actualRev:0,m.planRev,m.scenarioRev);
+    }),1);
+    monthlyEl.innerHTML = simData.monthly.map((m,idx)=>{
+      const monthIndex = parseMonthIndex(m.monthIndex ?? m.month ?? (idx+1));
+      const comp = compMap.get(monthIndex)||{};
+      const actualRev = Number(comp?.actual?.revenue);
+      const actualWidth = Number.isFinite(actualRev) ? (actualRev/mx*100) : 0;
+      const opAchvLabel = comp?.achv?.op===null||comp?.achv?.op===undefined ? '-' : (comp.achv.op*100).toFixed(1)+'%';
+      return `
       <div class="sim-row">
         <div class="m">${m.month}</div>
-        <div class="sim-track"><i style="width:${m.actualRev/mx*100}%;background:#64748b"></i><i style="width:${m.planRev/mx*100}%;background:#0ea5e9"></i><i style="width:${m.scenarioRev/mx*100}%;background:#22c55e"></i></div>
+        <div class="sim-track"><i style="width:${actualWidth}%;background:#64748b"></i><i style="width:${m.planRev/mx*100}%;background:#0ea5e9"></i><i style="width:${m.scenarioRev/mx*100}%;background:#22c55e"></i></div>
         <div class="n">P ${fB(m.planRev)}</div>
-        <div class="n">S ${fB(m.scenarioRev)}</div>
-      </div>`).join('');
+        <div class="n">S ${fB(m.scenarioRev)} · 달성 ${opAchvLabel}</div>
+      </div>`;
+    }).join('');
   }
 
   const bmEl = document.getElementById('simBmChart');
@@ -5457,7 +5542,7 @@ function parsePlanExcel(wb, filename){
     };
     const pickSheet=name=>wb.Sheets[wb.SheetNames.find(s=>String(s).includes(name))||name];
 
-    const monthly = monthLabels.map(m=>({month:m,revenue:null,op:null,netAdd:null,capa:null,mgmtFee:null,policyFee:null,arpu:null}));
+    const monthly = monthLabels.map((m,i)=>({month:m,monthIndex:i+1,revenue:null,op:null,netAdd:null,capa:null,mgmtFee:null,policyFee:null,arpu:null}));
 
     const isWs = pickSheet('전사 손익계산서');
     if(isWs){
@@ -5810,7 +5895,7 @@ function parseProfitYtdExcel(wb, filename){try{
     var opRow=null;
     for(var ri=260;ri<Math.min(rows.length,285);ri++){if(rows[ri]&&rows[ri][0]&&norm(rows[ri][0]).indexOf('\uc810\ud504\uc5c5')>=0&&norm(rows[ri][0]).indexOf('\uc870\uc815')>=0){opRow=rows[ri];break;}}
     if(opRow){
-      var entry={m:m};entry.total=Math.round((opRow[1]||0)/1e6)/100;
+      var entry={m:m,monthIndex:mi+1};entry.total=Math.round((opRow[1]||0)/1e6)/100;
       for(var ck in colMap)entry[ck]=Math.round((opRow[colMap[ck]]||0)/1e6)/100;
       trend.push(entry);loaded++;
     }
