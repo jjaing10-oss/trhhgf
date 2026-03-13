@@ -5302,10 +5302,8 @@ function getSavedBaseMonth(){
 function saveBaseMonth(month){
   if(!month) return;
   try{
-    const saved = getSavedBaseMonth();
-    const nextN = monthToNumber(month);
-    const savedN = monthToNumber(saved);
-    if(savedN && nextN && nextN < savedN) return;
+    // 최근 업로드 기준월을 그대로 저장한다.
+    // (이전 값이 더 크다는 이유로 저장을 막으면 탭 기준월이 과거/현재와 어긋날 수 있음)
     localStorage.setItem(BASE_MONTH_STORAGE_KEY, month);
   }catch(e){}
 }
