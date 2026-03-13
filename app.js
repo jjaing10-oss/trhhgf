@@ -5277,13 +5277,14 @@ function loadUploadedState(){
 }
 function updateTabMonthBadges(){
   const m = getSavedTabMonths();
+  const fallbackMonth = D.baseMonth || getSavedBaseMonth() || (D.period||'').replace(' 기준','') || null;
   const mapping = [
-    ['tabMonthTasks', m.tasks || D.taskMonth || null],
-    ['tabMonthProfit', m.profit || null],
-    ['tabMonthKpi', m.kpi || null],
-    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || null)],
-    ['tabMonthCommission', m.commission || null],
-    ['tabMonthSim', m.profit || null]
+    ['tabMonthTasks', m.tasks || D.taskMonth || fallbackMonth],
+    ['tabMonthProfit', m.profit || fallbackMonth],
+    ['tabMonthKpi', m.kpi || fallbackMonth],
+    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || fallbackMonth)],
+    ['tabMonthCommission', m.commission || fallbackMonth],
+    ['tabMonthSim', m.simulate || m.plan || m.profit || fallbackMonth]
   ];
   mapping.forEach(([id,val])=>{
     const el=document.getElementById(id);
@@ -5301,10 +5302,8 @@ function getSavedBaseMonth(){
 function saveBaseMonth(month){
   if(!month) return;
   try{
-    const saved = getSavedBaseMonth();
-    const nextN = monthToNumber(month);
-    const savedN = monthToNumber(saved);
-    if(savedN && nextN && nextN < savedN) return;
+    // 최근 업로드 기준월을 그대로 저장한다.
+    // (이전 값이 더 크다는 이유로 저장을 막으면 탭 기준월이 과거/현재와 어긋날 수 있음)
     localStorage.setItem(BASE_MONTH_STORAGE_KEY, month);
   }catch(e){}
 }
