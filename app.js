@@ -5513,66 +5513,54 @@ function parsePlanExcel(wb, filename){
     const pickSheet=name=>wb.Sheets[wb.SheetNames.find(s=>String(s).includes(name))||name];
 
     const monthly = monthLabels.map(m=>({month:m,revenue:null,op:null,netAdd:null,capa:null,mgmtFee:null,policyFee:null,arpu:null}));
+    const monthRegex = /(?:(\d{2})\.)?(1[0-2]|[1-9])월(?:\(E\))?/;
+    const getMonthCols=(rows)=>{
+      const cols={};
+      rows.forEach(r=>r.forEach((cell,idx)=>{
+        const m=String(cell||'').replace(/\s+/g,'').trim().match(monthRegex);
+        if(!m) return;
+        const monthNo=Number(m[2]);
+        if(monthNo>=1 && monthNo<=12 && cols[monthNo-1]===undefined) cols[monthNo-1]=idx;
+      }));
+      return cols;
+    };
+    const findRowByLabel=(rows, kw)=>rows.find(r=>[0,1,2,3].map(i=>norm(r[i])).join(' ').includes(norm(kw)));
 
-    function extractMonthlySeries(sheetName, rowKeywords){
-      const ws = pickSheet(sheetName);
-      if(!ws) return null;
-      const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      const monthCols={};
-      const monthRegex = /(?:(\d{2})\.)?(1[0-2]|[1-9])월(?:\(E\))?/;
-      rows.forEach(r=>{
-        r.forEach((cell,idx)=>{
-          const txt = String(cell||'').replace(/\s+/g,'').trim();
-          const m = txt.match(monthRegex);
-          if(!m) return;
-          const monthNo = Number(m[2]);
-          if(monthNo>=1 && monthNo<=12 && monthCols[monthNo-1]===undefined) monthCols[monthNo-1]=idx;
-        });
+    const isWs = pickSheet('전사 손익계산서');
+    if(isWs){
+      const rows = XLSX.utils.sheet_to_json(isWs,{header:1,defval:''});
+      const monthCols=getMonthCols(rows);
+      const revRow = findRowByLabel(rows,'매출');
+      const opRow = findRowByLabel(rows,'영업이익');
+      monthLabels.forEach((_,i)=>{
+        const c = monthCols[i];
+        if(c===undefined) return;
+        if(revRow) monthly[i].revenue = toNum(revRow[c]);
+        if(opRow) monthly[i].op = toNum(opRow[c]);
       });
-      const labelOf=row=>[0,1,2,3].map(i=>norm(row?.[i])).join(' ');
-      const candidates = rows
-        .filter(r=>rowKeywords.some(k=>labelOf(r).includes(norm(k))))
-        .map(r=>{
-          const vals = monthLabels.map((_,i)=>{
-            const c = monthCols[i];
-            return c===undefined ? null : toNum(r[c]);
-          });
-          const filled = vals.filter(v=>v!==null).length;
-          const magnitude = vals.reduce((sum,v)=>sum+Math.abs(v||0),0);
-          return {vals,filled,magnitude};
-        })
-        .filter(x=>x.filled>0)
-        .sort((a,b)=>(b.filled-a.filled)||(b.magnitude-a.magnitude));
-      return candidates[0]?.vals || null;
     }
 
-    const revenueSeries =
-      extractMonthlySeries('전사 손익계산서',['매출'])
-      || extractMonthlySeries('유통플랫폼',['매출'])
-      || null;
-    const opSeries =
-      extractMonthlySeries('전사 손익계산서',['영업이익'])
-      || extractMonthlySeries('유통플랫폼',['영업이익'])
-      || null;
-
-    if(revenueSeries) revenueSeries.forEach((v,i)=>{ if(v!==null) monthly[i].revenue=v; });
-    if(opSeries) opSeries.forEach((v,i)=>{ if(v!==null) monthly[i].op=v; });
+    if(monthly.every(m=>m.op===null) || monthly.every(m=>m.revenue===null)){
+      const pfWs = pickSheet('유통플랫폼');
+      if(pfWs){
+        const rows = XLSX.utils.sheet_to_json(pfWs,{header:1,defval:''});
+        const monthCols=getMonthCols(rows);
+        const revRow = findRowByLabel(rows,'매출');
+        const opRow = findRowByLabel(rows,'영업이익');
+        monthLabels.forEach((_,i)=>{
+          const c = monthCols[i];
+          if(c===undefined) return;
+          if(monthly[i].revenue===null && revRow) monthly[i].revenue = toNum(revRow[c]);
+          if(monthly[i].op===null && opRow) monthly[i].op = toNum(opRow[c]);
+        });
+      }
+    }
 
     const capaWs = pickSheet('무선 CAPA') || pickSheet('무선');
     if(capaWs){
       const rows = XLSX.utils.sheet_to_json(capaWs,{header:1,defval:''});
-      const monthCols={};
-      rows.forEach(r=>{
-        r.forEach((cell,idx)=>{
-          const txt=String(cell||'').replace(/\s+/g,'').trim();
-          const m=txt.match(/(?:(\d{2})\.)?(1[0-2]|[1-9])월(?:\(E\))?/);
-          if(!m) return;
-          const monthNo=Number(m[2]);
-          if(monthNo>=1 && monthNo<=12 && monthCols[monthNo-1]===undefined) monthCols[monthNo-1]=idx;
-        });
-      });
-      const findRow=(kw)=>rows.find(r=>[0,1,2,3].map(i=>norm(r[i])).join(' ').includes(norm(kw)));
-      const capaRow=findRow('CAPA'), netRow=findRow('순증'), mgRow=findRow('관리수수료'), poRow=findRow('정책수수료'), arRow=findRow('ARPU');
+      const monthCols=getMonthCols(rows);
+      const capaRow=findRowByLabel(rows,'CAPA'), netRow=findRowByLabel(rows,'순증'), mgRow=findRowByLabel(rows,'관리수수료'), poRow=findRowByLabel(rows,'정책수수료'), arRow=findRowByLabel(rows,'ARPU');
       monthLabels.forEach((_,i)=>{
         const c=monthCols[i];
         if(c===undefined) return;
