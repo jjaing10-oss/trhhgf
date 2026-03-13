@@ -5277,13 +5277,14 @@ function loadUploadedState(){
 }
 function updateTabMonthBadges(){
   const m = getSavedTabMonths();
+  const fallbackMonth = D.baseMonth || getSavedBaseMonth() || (D.period||'').replace(' 기준','') || null;
   const mapping = [
-    ['tabMonthTasks', m.tasks || D.taskMonth || null],
-    ['tabMonthProfit', m.profit || null],
-    ['tabMonthKpi', m.kpi || null],
-    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || null)],
-    ['tabMonthCommission', m.commission || null],
-    ['tabMonthSim', m.profit || null]
+    ['tabMonthTasks', m.tasks || D.taskMonth || fallbackMonth],
+    ['tabMonthProfit', m.profit || fallbackMonth],
+    ['tabMonthKpi', m.kpi || fallbackMonth],
+    ['tabMonthSubscriber', (typeof subscriberData!=='undefined' && subscriberData && subscriberData.baseMonth) ? subscriberData.baseMonth : (m.subscriber || fallbackMonth)],
+    ['tabMonthCommission', m.commission || fallbackMonth],
+    ['tabMonthSim', m.simulate || m.plan || m.profit || fallbackMonth]
   ];
   mapping.forEach(([id,val])=>{
     const el=document.getElementById(id);
