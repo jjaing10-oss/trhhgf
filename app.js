@@ -275,11 +275,64 @@ function renderWhatIfSummary(simData){
   const gapRev = scenario.revenue-plan.revenue;
   const gapOp = scenario.op-plan.op;
   const gapNet = scenario.netAdd-plan.netAdd;
+  const cumulativePlanActualRate = plan.op>0 ? (actual.op/plan.op)*100 : null;
   wrap.innerHTML = `
     <div class="sim-card"><div class="k">Actual (연환산)</div><div class="v">${fB(actual.revenue)}억</div><div class="d">영업이익 ${fB(actual.op)}억 · 마진 ${(actual.margin*100).toFixed(1)}%</div></div>
     <div class="sim-card"><div class="k">Plan 2026</div><div class="v">${fB(plan.revenue)}억</div><div class="d">영업이익 ${fB(plan.op)}억 · 순증 ${comma(plan.netAdd)}</div></div>
     <div class="sim-card"><div class="k">Scenario</div><div class="v">${fB(scenario.revenue)}억</div><div class="d">영업이익 ${fB(scenario.op)}억 · 마진 ${(scenario.margin*100).toFixed(1)}%</div></div>
-    <div class="sim-card"><div class="k">Gap (Scenario-Plan)</div><div class="v" style="color:${gapOp>=0?'#86efac':'#fca5a5'}">${gapOp>=0?'+':''}${fB(gapOp)}억</div><div class="d" style="color:${gapRev>=0?'#86efac':'#fca5a5'}">매출 ${gapRev>=0?'+':''}${fB(gapRev)}억 · 순증 ${gapNet>=0?'+':''}${comma(gapNet)}</div></div>`;
+    <div class="sim-card"><div class="k">Gap (Scenario-Plan)</div><div class="v" style="color:${gapOp>=0?'#86efac':'#fca5a5'}">${gapOp>=0?'+':''}${fB(gapOp)}억</div><div class="d" style="color:${gapRev>=0?'#86efac':'#fca5a5'}">매출 ${gapRev>=0?'+':''}${fB(gapRev)}억 · 순증 ${gapNet>=0?'+':''}${comma(gapNet)}</div></div>
+    <div class="sim-card" style="grid-column:1/-1"><div class="k">누적 계획 대비 누적 실적 달성률(영업이익 기준)</div><div class="d" style="font-weight:800;color:${cumulativePlanActualRate===null?'#94a3b8':cumulativePlanActualRate>=100?'#22c55e':cumulativePlanActualRate>=90?'#facc15':'#ef4444'}">${cumulativePlanActualRate===null?'-':cumulativePlanActualRate.toFixed(1)+'%'}</div></div>`;
+}
+
+
+function renderPlanActualMonthlyComparison(compData){
+  const tableEl = document.getElementById('simPlanActualTable');
+  const kpiEl = document.getElementById('simPlanActualKpi');
+  if(!tableEl && !kpiEl) return;
+  const rows = Array.isArray(compData?.rows) ? compData.rows : [];
+  const total = compData?.total || {};
+  const badgeStyle = rate=>{
+    if(rate===null || Number.isNaN(rate)) return 'background:#334155;color:#cbd5e1';
+    if(rate>=100) return 'background:#14532d;color:#bbf7d0';
+    if(rate>=90) return 'background:#713f12;color:#fde68a';
+    return 'background:#7f1d1d;color:#fecaca';
+  };
+
+  if(kpiEl){
+    const totalRate = Number(total.rate);
+    kpiEl.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px"><span style="font-size:11px;color:#94a3b8">누적(월합)</span><span style="font-size:12px;color:#cbd5e1">계획 ${fB(total.plan||0)}억 / 실적 ${fB(total.actual||0)}억 / 차이 ${fB(total.diff||0)}억</span><span style="padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;${badgeStyle(totalRate)}">달성률 ${Number.isFinite(totalRate)?totalRate.toFixed(1)+'%':'-'}</span></div>`;
+  }
+
+  if(tableEl){
+    tableEl.innerHTML = `
+      <div style="overflow:auto">      <table style="width:100%;border-collapse:collapse;font-size:11px">        <thead><tr><th style="text-align:left;padding:6px;color:#94a3b8">월</th><th style="text-align:right;padding:6px;color:#94a3b8">계획(영업이익)</th><th style="text-align:right;padding:6px;color:#94a3b8">실적(영업이익)</th><th style="text-align:right;padding:6px;color:#94a3b8">차이</th><th style="text-align:right;padding:6px;color:#94a3b8">달성률</th></tr></thead>        <tbody>${rows.map(r=>{
+          const missing = !r.hasActual;
+          const rateText = missing ? '<span style="padding:2px 6px;border-radius:999px;background:#374151;color:#d1d5db;font-size:10px">실적 미수집</span>' : `<span style="padding:2px 6px;border-radius:999px;font-weight:700;${badgeStyle(r.rate)}">${r.rate.toFixed(1)}%</span>`;
+          return `<tr><td style="padding:6px;border-top:1px solid #1e293b">${r.month}</td><td style="padding:6px;border-top:1px solid #1e293b;text-align:right">${fB(r.plan)}억</td><td style="padding:6px;border-top:1px solid #1e293b;text-align:right;color:${missing?'#9ca3af':'#e2e8f0'}">${missing?'-':fB(r.actual)+'억'}</td><td style="padding:6px;border-top:1px solid #1e293b;text-align:right;color:${r.diff>=0?'#4ade80':'#f87171'}">${r.diff>=0?'+':''}${fB(r.diff)}억</td><td style="padding:6px;border-top:1px solid #1e293b;text-align:right">${rateText}</td></tr>`;
+        }).join('')}</tbody>      </table>      </div>`;
+  }
+}
+
+function buildPlanActualComparisonData(simData){
+  const matched = String(D?.period||'').match(/(\d{1,2})월/);
+  const collectedMonths = matched ? Math.max(0, Math.min(12, Number(matched[1])||0)) : 1;
+  const rows = (simData?.monthly||[]).map((m,idx)=>{
+    const plan = Number(m.planOp)||0;
+    const actualValue = Number(m.actualOp);
+    const hasActual = idx < collectedMonths && Number.isFinite(actualValue);
+    const actual = hasActual ? actualValue : 0;
+    const diff = actual-plan;
+    const rate = hasActual && plan!==0 ? (actual/plan)*100 : null;
+    return { month:m.month||`${idx+1}월`, plan, actual, diff, rate, hasActual };
+  });
+  const total = rows.reduce((acc,r)=>{
+    acc.plan += r.plan;
+    if(r.hasActual) acc.actual += r.actual;
+    acc.diff += r.diff;
+    return acc;
+  },{plan:0,actual:0,diff:0});
+  total.rate = total.plan!==0 ? (total.actual/total.plan)*100 : null;
+  return { rows, total };
 }
 
 function renderWhatIfCharts(simData){
@@ -375,7 +428,9 @@ function updateSimulation(){
   renderWhatIfSummary(simData);
   renderWhatIfCharts(simData);
   renderWhatIfInsights(simData);
-  D.scenarioState = { ...(D.scenarioState||{}), inputs, simulatedData:simData };
+  const compData = buildPlanActualComparisonData(simData);
+  renderPlanActualMonthlyComparison(compData);
+  D.scenarioState = { ...(D.scenarioState||{}), inputs, simulatedData:simData, comparisonData:compData };
 }
 
 function switchKpiTab(tab){
